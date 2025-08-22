@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { io } from "socket.io-client";
 import { useDispatch, useSelector } from "react-redux";
 import { useAuth } from "../../../context/AuthContex";
 import { Theme } from "../../../theme/globalTheme";
 import {
   addMessage,
   setLastMessage,
+  toggleReaction,
 } from "../../../redux/features/chats/chatSlice";
 import { fetchLastTwoDaysMessages } from "../../../redux/features/chats/chatThunks";
 import { formatDateHeader } from "../../../../utils/DateFormater";
@@ -25,6 +25,9 @@ export function Messaging({ slectedFriends }) {
   const isSelectingRef = useRef(false);
   const typingTimeoutRef = useRef(null);
   const [command, setCommand] = useState(false);
+  const [hoveredMessageId, setHoveredMessageId] = useState(null);
+  const [reactionMenuOpenId, setReactionMenuOpenId] = useState(null);
+
   // const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
   // Socket connection (only once)
@@ -169,8 +172,6 @@ export function Messaging({ slectedFriends }) {
       setCommand(false);
     } else setCommand(false);
 
-    
-
     if (isSelectingRef.current) {
       isSelectingRef.current = false;
       return;
@@ -202,27 +203,52 @@ export function Messaging({ slectedFriends }) {
           angle: 120,
           spread: 100,
           particleCount: 300,
-          origin: { x:1,y:1 },
+          origin: { x: 1, y: 1 },
         });
       });
-      setMessage('')
-      setCommand(false)
+      setMessage("");
+      setCommand(false);
       return;
     }
-    
+
     dispatch(setLastMessage(message));
     const newMsg = {
       from: currentUserId,
       to: slectedFriends._id,
       text: message,
       timestamp: new Date().toISOString(),
+      reactions: [],
     };
 
     socket.emit("send_message", newMsg);
     dispatch(addMessage(newMsg));
     setMessage("");
-    setSuggestText([])
+    setSuggestText([]);
   };
+
+  const handleReaction = (messageId, emoji) => {
+    socket.emit("react_message", {
+      messageId,
+      emoji,
+      userId: currentUserId,
+    });
+
+    dispatch(toggleReaction({ messageId, emoji, userId: currentUserId }));
+  };
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const onReaction = ({ messageId, emoji, userId }) => {
+      dispatch(toggleReaction({ messageId, emoji, userId }));
+    };
+
+    socket.on("message_reaction", onReaction);
+
+    return () => {
+      socket.off("message_reaction", onReaction);
+    };
+  }, [socket, dispatch]);
 
   return (
     <>
@@ -270,14 +296,81 @@ export function Messaging({ slectedFriends }) {
                   const isFromFriend =
                     (msg.sender && msg.sender === slectedFriends._id) ||
                     (msg.from && msg.from === slectedFriends._id);
-
                   return (
                     <div
                       key={index}
-                      className={`flex ${
+                      className={`flex items-center gap-3 ${
                         isFromFriend ? "justify-start" : "justify-end"
                       }`}
+                      onMouseEnter={() => setHoveredMessageId(msg._id)}
+                      onMouseLeave={() => {
+                        setHoveredMessageId(null);
+                        setReactionMenuOpenId(null);
+                      }}
                     >
+                      {/* <div className="relative group">
+                        <div className="px-2  bg-gray-200 rounded-full text-blue-500 cursor-pointer">
+                          <i className="fa-solid fa-face-grin text-xs"></i>
+                          <i className="fa-solid fa-chevron-down text-xs ml-1"></i>
+                        </div>
+
+                        
+                        <div className="absolute bottom-full mb-2 flex gap-1 bg-white dark:bg-gray-200 p-1 rounded shadow ">
+                          {["❤️", "😂", "👍", "😢"].map((emoji) => (
+                            <span
+                              key={emoji}
+                              className="cursor-pointer text-lg relative hover:scale-200  "
+                              onClick={() => handleReaction(msg._id, emoji)}
+                            >
+                              {emoji}
+                            </span>
+                          ))}
+                        </div>
+                      </div> */}
+                      
+                      {hoveredMessageId === msg._id && (
+                        <div className="relative">
+                          <div
+                            className={`px-2 py-1 bg-gray-200 rounded-full text-blue-500 cursor-pointer flex items-center gap-1  `}
+                            onClick={() => {
+                              if (reactionMenuOpenId === msg._id) {
+                                setReactionMenuOpenId(null);
+                              } else {
+                                setReactionMenuOpenId(msg._id);
+                              }
+                            }}
+                          >
+                            <i className="fa-solid fa-face-grin text-xs"></i>
+                            <i className="fa-solid fa-chevron-down text-xs ml-1"></i>
+                          </div>
+
+                          {reactionMenuOpenId === msg._id && (
+  <div
+    className={`
+      absolute 
+      bottom-full 
+      mb-2 
+      flex gap-1 
+      bg-white dark:bg-gray-200 
+      p-1 rounded shadow z-10
+      ${isFromFriend ? "left-0" : "right-0"}
+    `}
+  >
+    {["❤️", "😂", "👍", "😢"].map((emoji) => (
+      <span
+        key={emoji}
+        className="cursor-pointer text-lg relative hover:scale-150 transition-transform"
+        onClick={() => handleReaction(msg._id, emoji)}
+      >
+        {emoji}
+      </span>
+    ))}
+  </div>
+)}
+
+                        </div>
+                      )}
+
                       <div
                         className={`max-w-[85%] md:max-w-[75%] px-4 py-2 text-sm rounded-2xl ${
                           isFromFriend
@@ -285,9 +378,7 @@ export function Messaging({ slectedFriends }) {
                             : "bg-blue-500 text-white rounded-tr-none shadow"
                         }`}
                       >
-                        <p className="whitespace-pre-wrap break-words">
-                          {msg.text}
-                        </p>
+                        {msg.text}
                         <small
                           className={`block text-xs mt-1 ${
                             isFromFriend
@@ -300,6 +391,36 @@ export function Messaging({ slectedFriends }) {
                             minute: "2-digit",
                           })}
                         </small>
+
+                        {msg.reactions && msg.reactions.length > 0 && (
+                          <div className="flex gap-1 mt-1 flex-wrap">
+                            {[
+                              ...new Set(msg.reactions.map((r) => r.emoji)),
+                            ].map((emoji, i) => {
+                              const sameEmojiReactions = msg.reactions.filter(
+                                (r) => r.emoji === emoji
+                              );
+                              const isReactedByCurrentUser =
+                                sameEmojiReactions.some(
+                                  (r) => r.userId === currentUserId
+                                );
+                              // const count = sameEmojiReactions.length;
+
+                              return (
+                                <span
+                                  key={i}
+                                  className={`text-xs  w-5 h-5  rounded-full border flex items-center justify-center gap-1  ${
+                                    isReactedByCurrentUser
+                                      ? "bg-blue-500 text-white border-blue-600"
+                                      : "bg-white dark:bg-gray-600 text-gray-700 dark:text-gray-200 border-gray-300"
+                                  }`}
+                                >
+                                  {emoji} 
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -351,7 +472,7 @@ export function Messaging({ slectedFriends }) {
           style={{ backgroundColor: Theme.thirdBackgroundColor }}
         >
           <div className="flex justify-center gap-10 mb-1 ">
-            {suggestText.slice(0,3).map((suggest, index) => (
+            {suggestText.slice(0, 3).map((suggest, index) => (
               <div
                 key={index}
                 className="bg-blue-400 text-sm text-white p-1 rounded-md font-medium"

@@ -31,9 +31,31 @@ const chatSlice = createSlice({
         setLastMessage: (state, action) => {
             state.lastMessage = action.payload;
             localStorage.setItem('byeMe', action.payload)
-        }
+        },
+        toggleReaction: (state, action) => {
+            const { messageId, userId, emoji } = action.payload;
+            const msg = state.messages.find((m) => m._id === messageId);
+            if (!msg) return;
+
+            if (!msg.reactions) msg.reactions = [];
+
+            const existing = msg.reactions.find(
+                (r) => r.userId === userId && r.emoji === emoji
+            );
+
+            if (existing) {
+                // Remove reaction (toggle off)
+                msg.reactions = msg.reactions.filter(
+                    (r) => !(r.userId === userId && r.emoji === emoji)
+                );
+            } else {
+                // Add reaction
+                msg.reactions.push({ userId, emoji });
+            }
+        },
+
     },
 });
 
-export const { addMessage, setMessages, clearMessages, setLastMessage } = chatSlice.actions;
+export const { addMessage, setMessages, clearMessages, setLastMessage, toggleReaction } = chatSlice.actions;
 export default chatSlice.reducer;
