@@ -10,7 +10,7 @@ export function SocketProvider({ children }) {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const newSocket = io(SOCKET_URL, { withCredentials: true });
+    const newSocket = io(`wss://${SOCKET_URL}`, { withCredentials: true, transports:["websocket"] });
     setSocket(newSocket);
 
     newSocket.on("connect", () => {
