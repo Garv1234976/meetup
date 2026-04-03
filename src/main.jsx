@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.jsx";
+import Modal from 'react-modal';
 import { AuthProvider } from "./context/AuthContex.jsx";
 import { BrowserRouter , HashRouter} from "react-router-dom";
 import AppRoutes from "./components/AppRoutes.jsx";
@@ -13,11 +14,11 @@ console.log("Google Client ID:", clientId);
 if (!clientId) {
   console.error("Google Client ID is missing!");
 }
-const fbId = import.meta.env.VITE_FB_APP_ID;
-console.log("Google Client ID:", fbId);
-if (!fbId) {
-  console.error("Google Client ID is missing!");
-}
+// const fbId = import.meta.env.VITE_FB_APP_ID;
+// console.log("Google Client ID:", fbId);
+// if (!fbId) {
+//   console.error("Google Client ID is missing!");
+// }
 createRoot(document.getElementById("root")).render(
   <Provider store={store}>
     <BrowserRouter>
@@ -27,3 +28,6 @@ createRoot(document.getElementById("root")).render(
     </BrowserRouter>
   </Provider>
 );
+
+Modal.setAppElement('#root');
+

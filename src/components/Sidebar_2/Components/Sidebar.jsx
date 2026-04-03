@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { Theme } from "../../../theme/globalTheme";
 import Logo from "/logo.svg";
 import { Messaging } from "../../Message/Components/Message";
@@ -7,9 +7,97 @@ import useOnline from "../../../utils/CheckOnline";
 import { UserContext } from "../../../context/Profile";
 import UserProfile from "../../Profile/PersonalInfo";
 import { useSelector } from "react-redux";
+import { ContentState } from "draft-js";
+import { convertFromHTML, convertToRaw } from "draft-js";
+import { motion, AnimatePresence } from "framer-motion";
+import draftToHtml from "draftjs-to-html";
+import { Editor } from "react-draft-wysiwyg";
+import { EditorState } from "draft-js";
+import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
+import { useSocket } from "../../../context/SocketContext";
+
+const templates = {
+  1: `
+    <p>👋 <b>Hello Everyone</b>,</p>
+    <p>We hope you're doing great! 😊</p>
+    <p>
+      📢 We’ve got something exciting for you!
+      Stay connected with us for updates, offers, and surprises 🎁
+    </p>
+    <p>💬 Feel free to reply anytime — we’re here to help!</p>
+    <p>🙏 Thank you for being part of our journey.</p>
+  `,
+
+  2: `
+    <p>🚀 <b>Big Update Alert!</b></p>
+    <p>
+      We’ve just launched <b>new features</b> to improve your experience 🎉
+    </p>
+    <ul>
+      <li>⚡ Faster performance</li>
+      <li>🎨 Improved UI</li>
+      <li>🔒 Better security</li>
+    </ul>
+    <p>👉 Try it now and let us know your feedback!</p>
+    <p>❤️ We appreciate your support.</p>
+  `,
+
+  3: `
+    <p>💰 <b>Special Offer Just for You!</b></p>
+    <p>
+      🎉 Get <b>50% OFF</b> on your next purchase!
+    </p>
+    <p>⏳ Hurry! Limited time offer.</p>
+    <p>
+      👉 Use code: <b>SAVE50</b>
+    </p>
+    <p>🛒 Don’t miss out — grab the deal now!</p>
+  `,
+
+  4: `
+    <p>🙏 <b>Thank You {{name}}!</b></p>
+    <p>
+      We truly appreciate your support ❤️
+    </p>
+    <p>
+      ⭐ If you’re enjoying our service, we’d love your feedback!
+    </p>
+    <p>
+      💬 Your opinion helps us grow and improve.
+    </p>
+    <p>🙌 Thanks for being with us!</p>
+  `,
+
+  5: `
+    <p>🔔 <b>Reminder!</b></p>
+    <p>
+      You have a pending action waiting ⏳
+    </p>
+    <p>
+      👉 Please complete it to continue using all features.
+    </p>
+    <p>⚡ It only takes a few seconds!</p>
+    <p>💡 Need help? We’re here for you.</p>
+  `,
+
+  6: `
+    <p>🎯 <b>Daily Tip</b></p>
+    <p>
+      Did you know? 🤔
+    </p>
+    <p>
+      Using our platform regularly can boost your productivity by <b>2x 🚀</b>
+    </p>
+    <p>
+      💡 Stay consistent and achieve more!
+    </p>
+    <p>🔥 Keep going, you’re doing great!</p>
+  `,
+};
 
 export function Sidebar_Two({ token }) {
   const off = useOnline();
+  const { socket } = useSocket();
   const { typingUsers } = useTyping();
   const [active, setActive] = useState(null);
   const [selectedFriend, setSelectedFriend] = useState(null);
@@ -17,6 +105,41 @@ export function Sidebar_Two({ token }) {
   const { isProfile, setIsProfile } = useContext(UserContext);
   const lastMessages = useSelector((state) => state.chat.lastMessagesByUserId);
   const lstMsgByMe = useSelector((state) => state.chat.lastMessage);
+  const [modalIsOpen, setIsOpen] = useState(false);
+  const [editorState, setEditorState] = useState(EditorState.createEmpty());
+  const [tempalate, SetTemplate] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [pickedFriend, setPickedFriend] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [sendingUsers, setSendingUsers] = useState([]);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const handleEscKey = useCallback(
+    (event) => {
+      if (event.key === "Escape") {
+        setIsOpen(false);
+      }
+    },
+    [modalIsOpen],
+  );
+
+  function openModal() {
+    setIsOpen(true);
+  }
+
+  function closeModal() {
+    setIsOpen(false);
+  }
+
+  function openTemplate() {
+    SetTemplate(true);
+  }
+
+  function closeTemplate() {
+    SetTemplate(false);
+  }
+
   useEffect(() => {
     fetch(`${import.meta.env.VITE_BACK_DEV_API}/chats`, {
       method: "GET",
@@ -41,6 +164,30 @@ export function Sidebar_Two({ token }) {
     setSelectedFriend(friend);
   }
 
+
+useEffect(() => {
+  const handleNewFriend = (e) => {
+    const newFriend = e.detail;
+
+    if (!newFriend || !newFriend._id) return;
+
+    setFriends((prev) => {
+      const safePrev = prev.filter((f) => f && f._id);
+
+      if (safePrev.some((f) => f._id === newFriend._id)) {
+        return safePrev;
+      }
+
+      return [...safePrev, newFriend];
+    });
+  };
+
+  window.addEventListener("friend-added", handleNewFriend);
+
+  return () => {
+    window.removeEventListener("friend-added", handleNewFriend);
+  };
+}, []);
   if (isProfile) {
     return (
       <div className="w-[65%] p-4 flex flex-col gap-4 bg-gray-500">
@@ -54,6 +201,23 @@ export function Sidebar_Two({ token }) {
       </div>
     );
   }
+
+  const pickedFriends = friends.filter((f) =>
+  selectedUsers.includes(String(f._id))
+);
+
+  const MAX_VISIBLE = 20;
+
+  const visibleFriends = pickedFriends.slice(0, MAX_VISIBLE);
+  const extraCount = pickedFriends.length - MAX_VISIBLE;
+  const filteredFriends = friends.filter((f) =>
+    f.name.toLowerCase().includes(searchTerm.toLowerCase()),
+  );
+  const getEditorHtml = () => {
+    const content = editorState.getCurrentContent();
+    return draftToHtml(convertToRaw(content));
+  };
+
 
   return (
     <>
@@ -89,10 +253,21 @@ export function Sidebar_Two({ token }) {
           className="overflow-y-auto scrollbar scrollbar-thin scrollbar-track-sky-200  scrollbar-thumb-blue-400 max-h-[calc(100vh-112px)] px-2"
           style={{ scrollbarGutter: "stable" }}
         >
-          {friends.map((friend) => (
-            <div
-              onClick={() => handleFriendSelect(friend)}
-              key={friend._id}
+          <AnimatePresence>
+          {friends.map((friend, i) => (
+            <motion.div
+              layout
+  initial={{ opacity: 0, scale: 0.8, x: -20 }}
+  animate={{ opacity: 1, scale: 1, x: 0 }}
+  exit={{ opacity: 0, scale: 0.7, x: 20 }}
+  transition={{
+    type: "spring",
+    stiffness: 400,
+    damping: 25,
+  }}
+              onClick={() => {handleFriendSelect(friend); console.log("this friend is clicked ");
+              }}
+              key={friend._id || i}
               // className="px-5 py-1  flex items-start justify-between mb-1 rounded-sm"
               className={`px-5 py-2 flex items-start justify-between mb-1 rounded-sm cursor-pointer ${
                 selectedFriend?._id === friend._id
@@ -149,13 +324,15 @@ export function Sidebar_Two({ token }) {
                     })
                   : ""}
               </span>
-            </div>
+            </motion.div>
           ))}
+           </AnimatePresence>
         </div>
       </div>
+
       {!selectedFriend ? (
         <div
-          className="hidden md:flex w-[65%] p-1.5  py-5  justify-center items-center "
+          className="hidden md:flex w-[65%] p-1.5  py-5  justify-center items-center  flex-col"
           style={{ backgroundColor: Theme.primaryBackgroundColor }}
         >
           <div className="flex justify-center">
@@ -169,10 +346,526 @@ export function Sidebar_Two({ token }) {
               </p>
             </div>
           </div>
+          <div className="flex justify-center pt-10">
+            <div className="flex gap-10">
+              <button
+                className="relative glow-wrapper px-5 py-2 rounded-md font-bold outline-none"
+                onClick={openModal}
+              >
+                <span className="relative">BroadCast</span>
+              </button>
+
+              <button className="rounded-md font-bold border border-blue-400 hover:text-white hover:bg-blue-600 px-4 py-1">
+                Create Channel
+              </button>
+            </div>
+          </div>
         </div>
       ) : (
-        <Messaging slectedFriends={selectedFriend} />
+        <Messaging
+          slectedFriends={selectedFriend}
+          onBack={() => setSelectedFriend(null)}
+        />
       )}
+
+      <AnimatePresence>
+        {modalIsOpen && (
+          <motion.div
+          key="modal-overlay"
+            className="fixed inset-0 bg-black/50 flex justify-center items-center z-[1000]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white w-[90%] h-[93%] rounded-xl relative"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.25 }}
+            >
+              {/* CLOSE BUTTON */}
+              <span
+                onClick={closeModal}
+                className="absolute top-3 right-3 bg-gray-400 px-3 py-1 rounded-md font-bold cursor-pointer"
+              >
+                ESC
+              </span>
+
+              <div className="p-4 h-full overflow-hidden">
+                <AnimatePresence>
+                  {modalIsOpen && (
+                    <div>
+                      <div>
+                        <div className="rounded-md flex justify-end  w-full">
+                          <div className="w-[65%]  flex justify-between">
+                            <span className="text-3xl font-semibold">
+                              Write Message to BroadCast
+                            </span>
+                          </div>
+                        </div>
+                        <div
+                          className="flex w-full  justify-between p-2 rounded-md my-2 h-[75vh] gap-5"
+                          style={{
+                            backgroundColor: Theme.primaryBackgroundColor,
+                          }}
+                        >
+                          <div className="w-[30%]">
+                            <p className="text-center font-semibold">
+                              Select to BroadCast
+                            </p>
+                            <div className="py-2 flex items-center gap-5">
+                              <input
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                type="search"
+                                className="w-75 border border-blue-400 rounded-md p-1"
+                                name=""
+                                id=""
+                                placeholder="Search for Friends"
+                              />
+                              <button
+                                onClick={() => {
+                                  if (selectedUsers.length === friends.length) {
+                                    // Unselect all
+                                    setSelectedUsers([]);
+                                  } else {
+                                    // Select all
+                                    setSelectedUsers(filteredFriends.map((f) => String(f._id)));
+                                  }
+                                }}
+                                className="rounded-md border text-blue-500 hover:text-blue-800 bg-blue-200 p-[7.2px] py-2 font-semibold cursor-pointer text-[12px]"
+                              >
+                                {selectedUsers.length === friends.length
+                                  ? "Unselect All"
+                                  : "Select All"}
+                              </button>
+                            </div>
+                            <div className="py-3">
+                              {filteredFriends.length === 0 && (
+                                <p className="text-center text-gray-500 mt-4">
+                                  No friends found 😔
+                                </p>
+                              )}
+                              {filteredFriends.map((d, i) => (
+                                <div
+                                  key={d?._id || i}
+                                  className="flex gap-5 px-3 items-center bg-blue-100 w-100 rounded-md mb-1 p-1"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedUsers.includes(String(d._id))}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedUsers((prev) => [
+                                          ...prev,
+                                          d._id,
+                                        ]);
+                                      } else {
+                                        setSelectedUsers((prev) =>
+                                          prev.filter((id) => id !== d._id),
+                                        );
+                                      }
+                                    }}
+                                    className="w-4 h-4"
+                                  />
+                                  <img
+                                    src={d.picture}
+                                    className="w-10 h-10 rounded-full"
+                                    alt=""
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className="text-lg">
+                                      {d.name
+                                        .split(
+                                          new RegExp(`(${searchTerm})`, "gi"),
+                                        )
+                                        .map((part, i) =>
+                                          part.toLowerCase() ===
+                                          searchTerm.toLowerCase() ? (
+                                            <span
+                                              key={i}
+                                              className="bg-yellow-200"
+                                            >
+                                              {part}
+                                            </span>
+                                          ) : (
+                                            part
+                                          ),
+                                        )}
+                                    </span>
+                                    <span className="font-semibold text-xs">
+                                      {d.email}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="w-[70%] bg-white rounded-2xl ">
+                            <div className="flex justify-center gap-10 py-2 items-center">
+                              <p>Write Message</p>
+                              <button
+                                onClick={openTemplate}
+                                className="rounded-md font-bold border border-blue-400 hover:text-white hover:bg-blue-600 px-4 py-1 cursor-pointer"
+                              >
+                                Use Template
+                              </button>
+                            </div>
+                            <Editor
+                              editorState={editorState}
+                              toolbarClassName="toolbarClassName"
+                              wrapperClassName="wrapperClassName"
+                              editorClassName="editorClassName"
+                              onEditorStateChange={setEditorState}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="absolute right-5 bottom-4 z-50">
+                          <div className="flex gap-10">
+                            <button
+                              className="relative glow-wrapper px-5 py-2 rounded-md font-bold outline-none cursor-pointer"
+                              onClick={() => {
+                                if (!socket) return;
+
+                                const content = editorState.getCurrentContent();
+                                // const text = content.getPlainText();
+                                const html = draftToHtml(
+                                  convertToRaw(editorState.getCurrentContent())
+                                );
+                                if (!content.hasText()) return;
+
+                                const recipients = selectedUsers.length
+                                  ? selectedUsers
+                                  : filteredFriends.map((f) => f._id);
+
+                                // ✅ SAVE USERS BEFORE CLEARING
+                                setSendingUsers(
+                                  friends.filter((f) =>
+                                    recipients.includes(f._id),
+                                  ),
+                                );
+
+                                // ✅ SHOW SENDING UI
+                                setIsSending(true);
+
+                                socket.emit("send_broadcast", {
+                                  recipients,
+                                  text : html,
+                                });
+
+                                // ✅ CLEAR BACKGROUND STATE
+                                setSelectedUsers([]);
+                                setSearchTerm("");
+                                setSelectedTemplate(null);
+                                SetTemplate(false);
+                                setEditorState(EditorState.createEmpty());
+
+                                closeModal();
+
+                                setTimeout(() => {
+                                  setIsSending(false);
+                                  setSendingUsers([]); // cleanup
+                                }, 2000);
+                              }}
+                              // disabled={!friends.length}
+                            >
+                              <span className="relative">BroadCast</span>
+                            </button>
+
+                            <button
+                              onClick={() => setIsPreviewOpen(true)}
+                              className="rounded-md font-bold border border-blue-400 hover:text-white hover:bg-blue-600 px-4 py-1"
+                            >
+                              Preview
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        className="p-2 flex flex-col items-start w-200 overflow-auto"
+                        style={{ scrollbarWidth: "none" }}
+                      >
+                        <div className="flex items-center group">
+                          <div className="flex items-center">
+                            <AnimatePresence>
+                              {visibleFriends.map((user, i) => (
+                                <motion.div
+                                  key={user._id || i}
+                                  layout
+                                  className="-ml-3 first:ml-0"
+                                  initial={{ scale: 0, opacity: 0, x: -10 }}
+                                  animate={{ scale: 1, opacity: 1, x: 0 }}
+                                  exit={{ scale: 0, opacity: 0, x: -10 }}
+                                  transition={{
+                                    duration: 0.25,
+                                    delay: i * 0.05,
+                                  }}
+                                >
+                                  <img
+                                    src={user.picture}
+                                    className="size-8 rounded-full ring-1 ring-gray-900"
+                                  />
+                                </motion.div>
+                              ))}
+
+                              {/* +COUNT BUBBLE */}
+                              {extraCount > 0 && (
+                                <motion.div
+                                  key="extra"
+                                  layout
+                                  className="-ml-3 flex items-center justify-center size-8 rounded-full bg-gray-800 text-white text-xs font-bold ring-2 ring-gray-900"
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  exit={{ scale: 0 }}
+                                >
+                                  +{extraCount}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {tempalate && (
+          <motion.div
+          
+            className="fixed inset-0 bg-black/50 flex justify-center items-start pt-20 z-[1000]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white w-[50%] h-[43%] rounded-xl relative origin-top"
+              initial={{ opacity: 0, y: -30, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="flex justify-end py-2 px-2">
+                <div
+                  onClick={closeTemplate}
+                  className="bg-gray-400 px-3 py-1 rounded-md font-bold cursor-pointer"
+                >
+                  ESC
+                </div>
+              </div>
+              <div className="p-3">
+                <div
+                  className="grid grid-cols-4 gap-40 overflow-auto"
+                  style={{ scrollbarWidth: "none" }}
+                >
+                  {[1, 2, 3, 4].map((item) => (
+                    <div
+                      key={item}
+                      className="w-52 h-44 bg-white border rounded-xl p-3 flex flex-col justify-between shadow hover:shadow-lg transition"
+                    >
+                      {/* TEMPLATE PREVIEW */}
+                      <div
+                        className="text-sm line-clamp-3"
+                        dangerouslySetInnerHTML={{ __html: templates[item] }}
+                      />
+
+                      {/* ACTION BUTTONS */}
+                      <div className="flex justify-between gap-2 mt-2">
+                        {/* PREVIEW BUTTON */}
+                        <button
+                          onClick={() => {
+                            setSelectedTemplate(item);
+                            // closeModal();
+                          }}
+                          className="flex-1 text-xs border border-gray-400 rounded-md py-1 hover:bg-gray-200"
+                        >
+                          Preview
+                        </button>
+
+                        {/* SELECT BUTTON */}
+                        <button
+                          onClick={() => {
+                            const html = templates[item];
+
+                            const blocksFromHTML = convertFromHTML(html);
+                            const content = ContentState.createFromBlockArray(
+                              blocksFromHTML.contentBlocks,
+                              blocksFromHTML.entityMap,
+                            );
+
+                            setEditorState(
+                              EditorState.createWithContent(content),
+                            );
+                            SetTemplate(false); // close template modal
+                          }}
+                          className="flex-1 text-xs bg-blue-500 text-white rounded-md py-1 hover:bg-blue-600"
+                        >
+                          Select
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-center py-4">
+                  <span className="rounded-md font-bold border border-blue-400 hover:text-white hover:bg-blue-600 px-4 py-1 cursor-pointer">
+                    Select Template here !
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* <AnimatePresence> */}
+          {selectedTemplate && (
+            <motion.div
+              className="fixed inset-0 bg-black/40 flex justify-center items-center z-[1100]"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                className="bg-white w-[40%] h-[50%] rounded-xl p-5 relative origin-center"
+                initial={{ opacity: 0, scale: 0.8, y: 40 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 40 }}
+                transition={{ duration: 0.25, ease: "easeInOut" }}
+              >
+                <div className="flex justify-end">
+                  <button
+                    onClick={() => setSelectedTemplate(null)}
+                    className="bg-gray-400 px-3 py-1 rounded-md font-bold"
+                  >
+                    Close
+                  </button>
+                </div>
+
+                <p className="text-lg font-semibold">
+                  Template {selectedTemplate}
+                </p>
+                <div
+                  className="border p-3 rounded-md"
+                  dangerouslySetInnerHTML={{
+                    __html: templates[selectedTemplate],
+                  }}
+                />
+              </motion.div>
+            </motion.div>
+          )}
+        {/* </AnimatePresence> */}
+      {/* </AnimatePresence> */}
+      {/* <AnimatePresence> */}
+        {isSending && (
+          <motion.div
+            className="fixed inset-0 bg-black/40 flex justify-center items-center z-[1200]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white px-6 py-6 rounded-2xl flex flex-col items-center gap-5 shadow-xl"
+              initial={{ y: 100, scale: 0.8, opacity: 0 }}
+              animate={{ y: 0, scale: 1, opacity: 1 }}
+              exit={{ y: 100, scale: 0.8, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+            >
+              {/* 🔥 Avatar Stack */}
+              <div className="flex items-center">
+                {/* <AnimatePresence> */}
+                  {sendingUsers.slice(0, 20).map((user, i) => (
+                    <motion.div
+                      key={user._id || i}
+                      className="-ml-3 first:ml-0"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                    >
+                      <img
+                        src={user.picture}
+                        className="size-10 rounded-full ring-2 ring-gray-900"
+                      />
+                    </motion.div>
+                  ))}
+
+                  {extraCount > 0 && (
+                    <motion.div
+                      className="-ml-3 size-10 flex items-center justify-center bg-gray-800 text-white rounded-full text-xs font-bold"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                    >
+                      +{extraCount}
+                    </motion.div>
+                  )}
+                {/* </AnimatePresence> */}
+              </div>
+
+              {/* 🔥 Loader */}
+              <motion.div
+                className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full"
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+              />
+
+              <p className="text-sm font-semibold text-gray-600">
+                Sending message...
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      {/* </AnimatePresence> */}
+
+      {/* <AnimatePresence> */}
+        {isPreviewOpen && (
+          <motion.div
+            className="fixed inset-0 bg-black/50 flex justify-center items-center z-[1100]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white w-[50%] max-h-[70vh] rounded-xl p-5 flex flex-col gap-4"
+              initial={{ scale: 0.8, opacity: 0, y: 40 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 40 }}
+              transition={{ duration: 0.25 }}
+            >
+              {/* HEADER */}
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-semibold">Preview Message</h2>
+                <button
+                  onClick={() => setIsPreviewOpen(false)}
+                  className="bg-gray-400 px-3 py-1 rounded-md font-bold"
+                >
+                  Close
+                </button>
+              </div>
+
+              {/* MESSAGE PREVIEW */}
+              <div className="border p-4 rounded-md overflow-auto bg-gray-50 flex items-center justify-center min-h-[150px]">
+              {editorState.getCurrentContent().hasText() ? (
+                <div
+                  dangerouslySetInnerHTML={{ __html: getEditorHtml() }}
+                  className="w-full"
+                />
+              ) : (
+                <div className="text-gray-500 text-center flex flex-col items-center gap-2">
+                  <span className="text-3xl">🫤</span>
+                  <p className="font-semibold">No Preview</p>
+                  <span className="text-sm font-semibold hover:underline cursor-pointer" onClick={() => setIsPreviewOpen(false)}>Write something to preview your message</span>
+                </div>
+              )}
+            </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

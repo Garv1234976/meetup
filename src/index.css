@@ -74,3 +74,74 @@
       0% { background-color: black; }
       100% { background-color: #6a22c5; } /* Fewer colors */
     }
+
+
+    .glow-wrapper {
+  position: relative;
+  border-radius: 8px;
+  background: white;
+  z-index: 0;
+}
+
+/* Animated glow BEHIND the entire box */
+.glow-wrapper::before {
+  content: "";
+  position: absolute;
+  inset: -3px; 
+  z-index: -1;
+  border-radius: inherit;
+
+  background: linear-gradient(
+    to left,
+    #ff5770,
+    #e4428d,
+    #c42da8,
+    #9e16c3,
+    #6501de,
+    #9e16c3,
+    #c42da8,
+    #e4428d,
+    #ff5770
+  );
+
+  background-size: 200% 200%;
+  animation: animateGlow 1.25s ease-in-out infinite;
+  filter: blur(12px);
+}
+
+/* Optional: subtle inner shadow for depth */
+.glow-wrapper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: white;
+  z-index: -1;
+}
+
+@keyframes animateGlow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+
+.wrapperClassName {
+  height: 100%;
+  /* background-color: red; */
+  max-height: 550px;
+  overflow: hidden;
+
+}
+
+.editorClassName {
+  min-height: 300px; 
+  padding: 10px;
+}
+
+.rdw-editor-main {
+  scrollbar-width: none;
+}

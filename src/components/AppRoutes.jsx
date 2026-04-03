@@ -4,6 +4,7 @@ import MainApp from "./App";
 import ProtectedRoute from "./ProctectedRoutes";
 import App from "../App"; // your login screen
 import PersonalInfo from "./Profile/PersonalInfo";
+import GroupChat from "./Group";
 
 export default function AppRoutes({ clientId }) {
   return (
@@ -17,11 +18,19 @@ export default function AppRoutes({ clientId }) {
           </ProtectedRoute>
         }
       />
-      <Route
+      {/* <Route
         path="/profile"
         element={
           <ProtectedRoute>
             <PersonalInfo />
+          </ProtectedRoute>
+        }
+      /> */}
+      <Route
+        path="/groupChat"
+        element={
+          <ProtectedRoute>
+            <GroupChat />
           </ProtectedRoute>
         }
       />

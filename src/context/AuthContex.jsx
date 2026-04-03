@@ -21,7 +21,7 @@ export const AuthProvider = ({ children }) => {
   }
   // Fetch user data from `/api/me`
   useEffect(() => {
-    if (!user) {
+    
       fetch(`${import.meta.env.VITE_BACK_DEV_API}/api/me`, {
         credentials: 'include',
       })
@@ -29,9 +29,8 @@ export const AuthProvider = ({ children }) => {
         .then((data) => setUser(data.user))
         .catch(() => setUser(null))
         .finally(() => setLoading(false));
-    }
-  }, [user]);
-
+    
+  }, []);
   return (
     <AuthContext.Provider value={{ user, setUser, loading }}>
       {children}
