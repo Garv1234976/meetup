@@ -101,7 +101,7 @@ function App({ clientId }) {
                       boxShadow: `10px 10px ${Theme.primaryBackgroundColor}`,
                     }}
                   >
-                    <p className="text-lg">Sign up / Sign in</p>
+                    <p className="text-lg">Sign up / Sign in with fda</p>
 
                     <div className="p-3">
                       <GoogleOAuthProvider clientId={clientId}>
