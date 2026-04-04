@@ -119,10 +119,10 @@ const handleAccept = async (senderId) => {
 
     const acceptedUser = requests.find((r) => r._id === senderId);
 
-    // ✅ 1. close popup
-    setOpen(false);
+    //  1. close popup
+    // setOpen(false);
 
-    // ✅ 2. instant UI update (OLD BEHAVIOR - KEEP THIS)
+    //  2. instant UI update (OLD BEHAVIOR - KEEP THIS)
     if (acceptedUser) {
       window.dispatchEvent(
         new CustomEvent("friend-added", {
@@ -131,7 +131,7 @@ const handleAccept = async (senderId) => {
       );
     }
 
-    // ✅ 3. fetch fresh user (SOURCE OF TRUTH)
+    //  3. fetch fresh user (SOURCE OF TRUTH)
     const userRes = await fetch(
       `${import.meta.env.VITE_BACK_DEV_API}/api/me`,
       { credentials: "include" }
@@ -140,12 +140,12 @@ const handleAccept = async (senderId) => {
     const updated = await userRes.json();
     setUser(updated.user);
 
-    // ✅ 4. 🔥 get FULL friend with chatId
+    //  4. 🔥 get FULL friend with chatId
     const fullFriend = updated.user.friends?.find(
       (f) => f._id === senderId
     );
 
-    // ✅ 5. 🔥 FIX Messaging issue
+    //  5. 🔥 FIX Messaging issue
     if (fullFriend) {
       setSelectedFriend({ ...fullFriend }); // IMPORTANT
     }
@@ -157,7 +157,7 @@ const handleAccept = async (senderId) => {
 
 const handleDecline = async (senderId) => {
   try {
-    setOpen(false); // 🔥 CLOSE POPUP
+    // setOpen(false); 
 
     await fetch(
       `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${senderId}/decline`,
@@ -180,6 +180,45 @@ const handleDecline = async (senderId) => {
     console.error("Decline failed");
   }
 };
+const handleAcceptAll = async () => {
+  try {
+    const res = await fetch(
+      `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/acceptall`,
+      {
+        method: "POST",
+        credentials: "include",
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    if (!res.ok) throw new Error();
+
+    // ✅ 1. 🔥 INSTANT UI (LIKE SINGLE ACCEPT)
+    requests.forEach((req) => {
+      window.dispatchEvent(
+        new CustomEvent("friend-added", {
+          detail: req,
+        })
+      );
+    });
+
+    // ✅ 2. clear request UI
+    setRequests([]);
+
+    // ✅ 3. refresh real data
+    const userRes = await fetch(
+      `${import.meta.env.VITE_BACK_DEV_API}/api/me`,
+      { credentials: "include" }
+    );
+
+    const updated = await userRes.json();
+    setUser(updated.user);
+
+  } catch (err) {
+    console.error("Accept all failed");
+  }
+};
+
 
   const copyToClipboard = (link) => {
     navigator.clipboard
@@ -322,7 +361,7 @@ useEffect(() => {
           </div>
           <div className="flex flex-col gap-3 lg:text-xl text-sm">
             {/* <i className="fa-solid fa-hand-point-up"></i> */}
-            <i className="fa-solid fa-user-plus" onClick={openInviteModal}></i>
+            <i className="fa-solid fa-user-plus cursor-pointer" onClick={openInviteModal}></i>
             <i
               className="fa-solid fa-bullhorn cursor-pointer"
               title="BroadCast"
@@ -358,9 +397,9 @@ useEffect(() => {
                       damping: 20,
                       mass: 0.6,
                     }}
-                    className="popup absolute bottom-1/12 rounded-lg left-12 md:left-15 bg-blue-300 z-20 p-2"
+                    className="popup absolute bottom-1/12 rounded-lg left-12 md:left-15 bg-blue-300 z-20 p-2 w-70"
                   >
-                    <div className="flex  items-center gap-1 ">
+                    <div className="flex  items-center gap-1 justify-between ">
                       <h3>Friend Requests</h3>
                       {/* {forSender?.friendRequestsReceived?.length > 0 ? (
                         <div className="bg-black w-4 h-4 rounded-full text-white text-[0.6rem]  text-center flex items-center justify-center font-semibold">
@@ -369,12 +408,14 @@ useEffect(() => {
                       ) : (
                         ""
                       )} */}
+                      <button onClick={handleAcceptAll} className="text-xs bg-blue-500 px-2 rounded-xl font-semibold text-white">accept all</button>
                     </div>
                     {requests.length === 0 ? (
                       <p className="text-xs">No new requests.</p>
                     ) : (
                       <AnimatePresence>
-                        {requests.map((req) => (
+                        <div className="h-50 overflow-y-scroll p-2" style={{scrollbarWidth: "none"}}>
+                          {requests.map((req) => (
                           <motion.div
                             layout
                             initial={{ opacity: 0, scale: 0.8 }}
@@ -382,22 +423,20 @@ useEffect(() => {
                             exit={{ opacity: 0, scale: 0.6, x: 50 }}
                             transition={{ duration: 0.2 }}
                             key={req._id}
-                            className="request-item flex items-end"
+                            className="request-item flex items-center justify-between mb-2 px-2 py-1 rounded-xl"
+                            style={{backgroundColor: Theme.thirdBackgroundColor}}
                           >
-                            <div className="flex items-end justify-center ">
+                            <div className="flex items-end gap-2">
                               <img
-                                className="w-13 rounded-xl"
+                                className="w-7 h-7 rounded-full"
                                 src={req.picture}
                                 alt={req.name}
                               />
-                              {/* <span className="w-13 absolute  bg-amber-300 px-[11px] rounded-b-xl text-xs text-center ">
-                          {req.name}
-                        </span> */}
-                            </div>
-                            <div className="flex flex-col justify-between gap-2 p-1">
-                              <p className="text-sm font-semibold uppercase">
+                              <p className="text-xs font-semibold uppercase">
                                 {req.name}
                               </p>
+                            </div>
+                            <div className="flex flex-col justify-between gap-2 p-1">
                               <div className="flex gap-3">
                                 <button
                                   onClick={() => handleDecline(req._id)}
@@ -415,6 +454,7 @@ useEffect(() => {
                             </div>
                           </motion.div>
                         ))}
+                        </div>
                       </AnimatePresence>
                     )}
                     <div className="flex flex-col justify-center items-center mt-2">

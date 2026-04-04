@@ -5,6 +5,7 @@ import ProtectedRoute from "./ProctectedRoutes";
 import App from "../App"; // your login screen
 import PersonalInfo from "./Profile/PersonalInfo";
 import GroupChat from "./Group";
+import { CreateChannel } from "./CreateChannel/CreateChannel";
 
 export default function AppRoutes({ clientId }) {
   return (
@@ -34,6 +35,16 @@ export default function AppRoutes({ clientId }) {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/channel"
+        element={
+          <ProtectedRoute>
+            <CreateChannel/>
+          </ProtectedRoute>
+        }
+      />
     </Routes>
   );
 }
+
+

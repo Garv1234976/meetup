@@ -15,6 +15,7 @@ import { Editor } from "react-draft-wysiwyg";
 import { EditorState } from "draft-js";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 import { useSocket } from "../../../context/SocketContext";
+import { useNavigate } from "react-router-dom";
 
 const templates = {
   1: `
@@ -116,6 +117,8 @@ export function Sidebar_Two({ token }) {
   const [sendingUsers, setSendingUsers] = useState([]);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [broadcastError, setBroadcastError] = useState(false);
+  const [createChannleModal,setCreateChannleModal] = useState(false);
+  const navigate = useNavigate()
   const handleEscKey = useCallback(
     (event) => {
       if (event.key === "Escape") {
@@ -140,6 +143,7 @@ export function Sidebar_Two({ token }) {
   function closeTemplate() {
     SetTemplate(false);
   }
+
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_BACK_DEV_API}/chats`, {
@@ -392,8 +396,8 @@ export function Sidebar_Two({ token }) {
                 <span className="relative">BroadCast</span>
               </button>
 
-              <button className="rounded-md font-bold border border-blue-400 hover:text-white hover:bg-blue-600 px-4 py-1">
-                Create Channel
+              <button onClick={() => navigate('/channel')}  className="rounded-md font-bold border border-blue-400 hover:text-white hover:bg-blue-600 px-4 py-1 flex gap-2 items-center">
+                <span><i class="fa-solid fa-bullhorn"></i> </span>Create Channel
               </button>
             </div>
           </div>
@@ -406,6 +410,8 @@ export function Sidebar_Two({ token }) {
       )}
 
       <AnimatePresence>
+
+        {/* Broadcast Modal */}
         {modalIsOpen && (
           <motion.div
             key="modal-overlay"
@@ -430,7 +436,7 @@ export function Sidebar_Two({ token }) {
               </span>
 
               <div className="p-4 h-full overflow-hidden">
-                <AnimatePresence>
+                {/* <AnimatePresence> */}
                   {modalIsOpen && (
                     <div>
                       <div>
@@ -683,7 +689,7 @@ export function Sidebar_Two({ token }) {
                       </div>
                     </div>
                   )}
-                </AnimatePresence>
+                {/* </AnimatePresence> */}
               </div>
             </motion.div>
           </motion.div>
