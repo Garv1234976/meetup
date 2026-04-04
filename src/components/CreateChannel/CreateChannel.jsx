@@ -5,6 +5,7 @@ import { Theme } from "../../theme/globalTheme";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+
 export function CreateChannel({ token }) {
     const [showForm, setShowForm] = useState(false);
     const [isWiping, setIsWiping] = useState(false);
