@@ -115,6 +115,7 @@ export function Sidebar_Two({ token }) {
   const [isSending, setIsSending] = useState(false);
   const [sendingUsers, setSendingUsers] = useState([]);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [broadcastError, setBroadcastError] = useState(false);
   const handleEscKey = useCallback(
     (event) => {
       if (event.key === "Escape") {
@@ -164,30 +165,61 @@ export function Sidebar_Two({ token }) {
     setSelectedFriend(friend);
   }
 
+  useEffect(() => {
+    const handleNewFriend = (e) => {
+      const newFriend = e.detail;
 
-useEffect(() => {
-  const handleNewFriend = (e) => {
-    const newFriend = e.detail;
+      if (!newFriend || !newFriend._id) return;
 
-    if (!newFriend || !newFriend._id) return;
+      setFriends((prev) => {
+        const safePrev = prev.filter((f) => f && f._id);
 
-    setFriends((prev) => {
-      const safePrev = prev.filter((f) => f && f._id);
+        if (safePrev.some((f) => f._id === newFriend._id)) {
+          return safePrev;
+        }
 
-      if (safePrev.some((f) => f._id === newFriend._id)) {
-        return safePrev;
-      }
+        return [...safePrev, newFriend];
+      });
+    };
 
-      return [...safePrev, newFriend];
+    window.addEventListener("friend-added", handleNewFriend);
+
+    return () => {
+      window.removeEventListener("friend-added", handleNewFriend);
+    };
+  }, [friends]);
+
+  const handleFriendClick = async (friend) => {
+  try {
+    // 1. Fetch latest chats
+    const res = await fetch(`${import.meta.env.VITE_BACK_DEV_API}/chats`, {
+      method: "GET",
+      credentials: "include",
+      headers: { Authorization: `Bearer ${token}` },
     });
-  };
 
-  window.addEventListener("friend-added", handleNewFriend);
+    const data = await res.json();
+    const freshFriends = data?.friends || [];
 
-  return () => {
-    window.removeEventListener("friend-added", handleNewFriend);
-  };
-}, []);
+    // 2. Update state
+    setFriends(freshFriends);
+
+    // 3. Find updated friend (VERY IMPORTANT)
+    const updatedFriend = freshFriends.find(
+      (f) => String(f._id) === String(friend._id)
+    );
+
+    // 4. Open chat with fresh data
+    if (updatedFriend) {
+      setSelectedFriend(updatedFriend);
+    } else {
+      console.warn("Friend not found after refresh");
+    }
+
+  } catch (err) {
+    console.error("Failed to refresh chats", err);
+  }
+};
   if (isProfile) {
     return (
       <div className="w-[65%] p-4 flex flex-col gap-4 bg-gray-500">
@@ -203,8 +235,8 @@ useEffect(() => {
   }
 
   const pickedFriends = friends.filter((f) =>
-  selectedUsers.includes(String(f._id))
-);
+    selectedUsers.includes(String(f._id)),
+  );
 
   const MAX_VISIBLE = 20;
 
@@ -217,7 +249,6 @@ useEffect(() => {
     const content = editorState.getCurrentContent();
     return draftToHtml(convertToRaw(content));
   };
-
 
   return (
     <>
@@ -254,79 +285,85 @@ useEffect(() => {
           style={{ scrollbarGutter: "stable" }}
         >
           <AnimatePresence>
-          {friends.map((friend, i) => (
-            <motion.div
-              layout
-  initial={{ opacity: 0, scale: 0.8, x: -20 }}
-  animate={{ opacity: 1, scale: 1, x: 0 }}
-  exit={{ opacity: 0, scale: 0.7, x: 20 }}
-  transition={{
-    type: "spring",
-    stiffness: 400,
-    damping: 25,
-  }}
-              onClick={() => {handleFriendSelect(friend); console.log("this friend is clicked ");
-              }}
-              key={friend._id || i}
-              // className="px-5 py-1  flex items-start justify-between mb-1 rounded-sm"
-              className={`px-5 py-2 flex items-start justify-between mb-1 rounded-sm cursor-pointer ${
-                selectedFriend?._id === friend._id
-                  ? "bg-blue-100 border border-blue-300"
-                  : "bg-white"
-              }`}
-              style={{
-                backgroundColor:
-                  active === friend.id
-                    ? Theme.onchat.inactive
-                    : Theme.onchat.active,
-                border:
-                  active === friend.id
-                    ? `1px solid ${Theme.onchat.borderColor}`
-                    : "",
-              }}
-            >
-              <div className="flex gap-2">
-                <img
-                  className="w-10 h-10 rounded-full mix-blend-multiply"
-                  src={friend.picture}
-                  alt={`profile picture of ${friend.name}`}
-                />
-                <div className="flex flex-col">
-                  <span>{friend.name}</span>
-                  {/* {console.log(friend)} */}
-                  {/* {friend._id && typingUsers[friend._id] ? <p>typing ..</p> : lastMessages[friend._id]?.text.length > 14 ? <span>{lastMessages[friend._id]?.text.slice(0, 14)}...</span> : <span>{lastMessages[friend._id]?.text}</span> || lstMsgByMe
+            {friends.map((friend, i) => (
+              <motion.div
+                layout
+                initial={{ opacity: 0, scale: 0.8, x: -20 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 0.7, x: 20 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 400,
+                  damping: 25,
+                }}
+                onClick={() => {
+                  handleFriendClick(friend);
+                  console.log("this friend is clicked ");
+                  console.log(friend);
+                }}
+                key={friend._id || i}
+                // className="px-5 py-1  flex items-start justify-between mb-1 rounded-sm"
+                className={`px-5 py-2 flex items-start justify-between mb-1 rounded-sm cursor-pointer ${
+                  selectedFriend?._id === friend._id
+                    ? "bg-blue-100 border border-blue-300"
+                    : "bg-white"
+                }`}
+                style={{
+                  backgroundColor:
+                    active === friend.id
+                      ? Theme.onchat.inactive
+                      : Theme.onchat.active,
+                  border:
+                    active === friend.id
+                      ? `1px solid ${Theme.onchat.borderColor}`
+                      : "",
+                }}
+              >
+                <div className="flex gap-2">
+                  <img
+                    className="w-10 h-10 rounded-full mix-blend-multiply"
+                    src={friend.picture}
+                    alt={`profile picture of ${friend.name}`}
+                  />
+                  <div className="flex flex-col">
+                    <span>{friend.name}</span>
+                    {/* {console.log(friend)} */}
+                    {/* {friend._id && typingUsers[friend._id] ? <p>typing ..</p> : lastMessages[friend._id]?.text.length > 14 ? <span>{lastMessages[friend._id]?.text.slice(0, 14)}...</span> : <span>{lastMessages[friend._id]?.text}</span> || lstMsgByMe
                 
                 } */}
-                  {friend._id && typingUsers[friend._id] ? (
-                    <p>typing ..</p>
-                  ) : lastMessages[friend._id]?.text ? (
-                    <span>
-                      {lastMessages[friend._id].text.length > 14
-                        ? `${lastMessages[friend._id].text.slice(0, 14)}...`
-                        : lastMessages[friend._id].text}
-                    </span>
-                  ) : lstMsgByMe ? (
-                    <span>
-                      {lstMsgByMe.length > 14
-                        ? `${lstMsgByMe.slice(0, 14)}...`
-                        : lstMsgByMe}
-                    </span>
-                  ) : (
-                    <span>No messages yet</span>
-                  )}
+                 {friend._id && typingUsers[friend._id] && (
+                  <p>typing ..</p>
+                 ) }
+                    {/* {friend._id && typingUsers[friend._id] ? (
+                      <p>typing ..</p>
+                    ) : lastMessages[friend._id]?.text ? (
+                      <span>
+                        {lastMessages[friend._id].text.length > 14
+                          ? `${lastMessages[friend._id].text.slice(0, 14)}...`
+                          : lastMessages[friend._id].text}
+                      </span>
+                    ) : lstMsgByMe ? (
+                      <span>
+                        {lstMsgByMe.length > 14
+                          ? `${lstMsgByMe.slice(0, 14)}...`
+                          : lstMsgByMe}
+                      </span>
+                    ) : (
+                      <span>No messages yet</span>
+                    )} */}
+                  </div>
                 </div>
-              </div>
-              <span>
-                {friend.lastMessageAt
-                  ? new Date(friend.lastMessageAt).toLocaleTimeString([], {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
-                  : ""}
-              </span>
-            </motion.div>
-          ))}
-           </AnimatePresence>
+                <span>
+                  {friend.lastMessageAt
+                    ? new Date(friend.lastMessageAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : ""}
+                </span>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -371,7 +408,7 @@ useEffect(() => {
       <AnimatePresence>
         {modalIsOpen && (
           <motion.div
-          key="modal-overlay"
+            key="modal-overlay"
             className="fixed inset-0 bg-black/50 flex justify-center items-center z-[1000]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -431,7 +468,9 @@ useEffect(() => {
                                     setSelectedUsers([]);
                                   } else {
                                     // Select all
-                                    setSelectedUsers(filteredFriends.map((f) => String(f._id)));
+                                    setSelectedUsers(
+                                      filteredFriends.map((f) => String(f._id)),
+                                    );
                                   }
                                 }}
                                 className="rounded-md border text-blue-500 hover:text-blue-800 bg-blue-200 p-[7.2px] py-2 font-semibold cursor-pointer text-[12px]"
@@ -454,12 +493,14 @@ useEffect(() => {
                                 >
                                   <input
                                     type="checkbox"
-                                    checked={selectedUsers.includes(String(d._id))}
+                                    checked={selectedUsers.includes(
+                                      String(d._id),
+                                    )}
                                     onChange={(e) => {
                                       if (e.target.checked) {
                                         setSelectedUsers((prev) => [
                                           ...prev,
-                                          d._id,
+                                          String(d._id),
                                         ]);
                                       } else {
                                         setSelectedUsers((prev) =>
@@ -532,30 +573,42 @@ useEffect(() => {
                                 const content = editorState.getCurrentContent();
                                 // const text = content.getPlainText();
                                 const html = draftToHtml(
-                                  convertToRaw(editorState.getCurrentContent())
+                                  convertToRaw(editorState.getCurrentContent()),
                                 );
                                 if (!content.hasText()) return;
 
-                                const recipients = selectedUsers.length
-                                  ? selectedUsers
-                                  : filteredFriends.map((f) => f._id);
+                                // const recipients = selectedUsers.length
+                                //   ? selectedUsers
+                                //   : filteredFriends.map((f) => f._id);
 
-                                // ✅ SAVE USERS BEFORE CLEARING
+                                if (!selectedUsers.length) {
+                                  setBroadcastError(true);
+
+                                  setTimeout(() => {
+                                    setBroadcastError(false);
+                                  }, 2000);
+
+                                  return;
+                                }
+
+                                const recipients = selectedUsers.map(String);
+
+                                //  SAVE USERS BEFORE CLEARING
                                 setSendingUsers(
                                   friends.filter((f) =>
-                                    recipients.includes(f._id),
+                                    recipients.includes(String(f._id)),
                                   ),
                                 );
 
-                                // ✅ SHOW SENDING UI
+                                //  SHOW SENDING UI
                                 setIsSending(true);
 
                                 socket.emit("send_broadcast", {
                                   recipients,
-                                  text : html,
+                                  text: html,
                                 });
 
-                                // ✅ CLEAR BACKGROUND STATE
+                                //  CLEAR BACKGROUND STATE
                                 setSelectedUsers([]);
                                 setSearchTerm("");
                                 setSelectedTemplate(null);
@@ -638,7 +691,6 @@ useEffect(() => {
 
         {tempalate && (
           <motion.div
-          
             className="fixed inset-0 bg-black/50 flex justify-center items-start pt-20 z-[1000]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -723,44 +775,44 @@ useEffect(() => {
         )}
 
         {/* <AnimatePresence> */}
-          {selectedTemplate && (
+        {selectedTemplate && (
+          <motion.div
+            className="fixed inset-0 bg-black/40 flex justify-center items-center z-[1100]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
             <motion.div
-              className="fixed inset-0 bg-black/40 flex justify-center items-center z-[1100]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              className="bg-white w-[40%] h-[50%] rounded-xl p-5 relative origin-center"
+              initial={{ opacity: 0, scale: 0.8, y: 40 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 40 }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
             >
-              <motion.div
-                className="bg-white w-[40%] h-[50%] rounded-xl p-5 relative origin-center"
-                initial={{ opacity: 0, scale: 0.8, y: 40 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.8, y: 40 }}
-                transition={{ duration: 0.25, ease: "easeInOut" }}
-              >
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => setSelectedTemplate(null)}
-                    className="bg-gray-400 px-3 py-1 rounded-md font-bold"
-                  >
-                    Close
-                  </button>
-                </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setSelectedTemplate(null)}
+                  className="bg-gray-400 px-3 py-1 rounded-md font-bold"
+                >
+                  Close
+                </button>
+              </div>
 
-                <p className="text-lg font-semibold">
-                  Template {selectedTemplate}
-                </p>
-                <div
-                  className="border p-3 rounded-md"
-                  dangerouslySetInnerHTML={{
-                    __html: templates[selectedTemplate],
-                  }}
-                />
-              </motion.div>
+              <p className="text-lg font-semibold">
+                Template {selectedTemplate}
+              </p>
+              <div
+                className="border p-3 rounded-md"
+                dangerouslySetInnerHTML={{
+                  __html: templates[selectedTemplate],
+                }}
+              />
             </motion.div>
-          )}
+          </motion.div>
+        )}
         {/* </AnimatePresence> */}
-      {/* </AnimatePresence> */}
-      {/* <AnimatePresence> */}
+        {/* </AnimatePresence> */}
+        {/* <AnimatePresence> */}
         {isSending && (
           <motion.div
             className="fixed inset-0 bg-black/40 flex justify-center items-center z-[1200]"
@@ -778,31 +830,31 @@ useEffect(() => {
               {/* 🔥 Avatar Stack */}
               <div className="flex items-center">
                 {/* <AnimatePresence> */}
-                  {sendingUsers.slice(0, 20).map((user, i) => (
-                    <motion.div
-                      key={user._id || i}
-                      className="-ml-3 first:ml-0"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      exit={{ scale: 0 }}
-                      transition={{ delay: i * 0.05 }}
-                    >
-                      <img
-                        src={user.picture}
-                        className="size-10 rounded-full ring-2 ring-gray-900"
-                      />
-                    </motion.div>
-                  ))}
+                {sendingUsers.slice(0, 20).map((user, i) => (
+                  <motion.div
+                    key={user._id || i}
+                    className="-ml-3 first:ml-0"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                  >
+                    <img
+                      src={user.picture}
+                      className="size-10 rounded-full ring-2 ring-gray-900"
+                    />
+                  </motion.div>
+                ))}
 
-                  {extraCount > 0 && (
-                    <motion.div
-                      className="-ml-3 size-10 flex items-center justify-center bg-gray-800 text-white rounded-full text-xs font-bold"
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                    >
-                      +{extraCount}
-                    </motion.div>
-                  )}
+                {extraCount > 0 && (
+                  <motion.div
+                    className="-ml-3 size-10 flex items-center justify-center bg-gray-800 text-white rounded-full text-xs font-bold"
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                  >
+                    +{extraCount}
+                  </motion.div>
+                )}
                 {/* </AnimatePresence> */}
               </div>
 
@@ -819,9 +871,9 @@ useEffect(() => {
             </motion.div>
           </motion.div>
         )}
-      {/* </AnimatePresence> */}
+        {/* </AnimatePresence> */}
 
-      {/* <AnimatePresence> */}
+        {/* <AnimatePresence> */}
         {isPreviewOpen && (
           <motion.div
             className="fixed inset-0 bg-black/50 flex justify-center items-center z-[1100]"
@@ -849,20 +901,39 @@ useEffect(() => {
 
               {/* MESSAGE PREVIEW */}
               <div className="border p-4 rounded-md overflow-auto bg-gray-50 flex items-center justify-center min-h-[150px]">
-              {editorState.getCurrentContent().hasText() ? (
-                <div
-                  dangerouslySetInnerHTML={{ __html: getEditorHtml() }}
-                  className="w-full"
-                />
-              ) : (
-                <div className="text-gray-500 text-center flex flex-col items-center gap-2">
-                  <span className="text-3xl">🫤</span>
-                  <p className="font-semibold">No Preview</p>
-                  <span className="text-sm font-semibold hover:underline cursor-pointer" onClick={() => setIsPreviewOpen(false)}>Write something to preview your message</span>
-                </div>
-              )}
-            </div>
+                {editorState.getCurrentContent().hasText() ? (
+                  <div
+                    dangerouslySetInnerHTML={{ __html: getEditorHtml() }}
+                    className="w-full"
+                  />
+                ) : (
+                  <div className="text-gray-500 text-center flex flex-col items-center gap-2">
+                    <span className="text-3xl">🫤</span>
+                    <p className="font-semibold">No Preview</p>
+                    <span
+                      className="text-sm font-semibold hover:underline cursor-pointer"
+                      onClick={() => setIsPreviewOpen(false)}
+                    >
+                      Write something to preview your message
+                    </span>
+                  </div>
+                )}
+              </div>
             </motion.div>
+          </motion.div>
+        )}
+        {broadcastError && (
+          <motion.div
+            initial={{ opacity: 0, y: -40, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -40, scale: 0.8 }}
+            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            className="fixed top-5 right-5 bg-yellow-500 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 z-[9999]"
+          >
+            <span className="text-lg">⚠️</span>
+            <span className="text-sm font-medium">
+              Select at least one user
+            </span>
           </motion.div>
         )}
       </AnimatePresence>

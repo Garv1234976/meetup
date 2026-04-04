@@ -60,8 +60,7 @@ const SkeletonBubble = ({ isFromFriend }) => {
   );
 };
 export function Messaging({ slectedFriends, onBack }) {
-  console.log("This is the Message compo",JSON.stringify(slectedFriends));
-  
+  // console.log("This is the Message compo",JSON.stringify(slectedFriends));
   const { socket, isReady } = useSocket();
   const { user } = useAuth();
   const { updateTyping } = useTyping();
