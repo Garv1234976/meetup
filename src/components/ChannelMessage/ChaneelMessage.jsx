@@ -99,7 +99,7 @@ useEffect(() => {
     if (!socket) return;
 
     const handlePreview = (data) => {
-      // console.log("PREVIEW:", data);
+      console.log("PREVIEW:", JSON.stringify(data));
       setGetPreviewData(data);
       setIsPreviewLoading(false);
       setIsPreviewLoading(false);
