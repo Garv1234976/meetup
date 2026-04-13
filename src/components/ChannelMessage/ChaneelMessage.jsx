@@ -479,7 +479,7 @@ useEffect(() => {
 
                             {msg.preview.images?.[0] && (
                               <img
-                                src={msg.preview.images[0]}
+                                src={msg.preview.images[0] || msg.preview.favicons?.[0] }
                                 className="w-full object-cover rounded-bl-lg rounded-r-md"
                               />
                             )}
