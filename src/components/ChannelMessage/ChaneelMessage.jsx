@@ -616,12 +616,14 @@ useEffect(() => {
               {!isPreviewLoading && getPreviewData && (
                 <div className="bg-white rounded-xl shadow-md overflow-hidden border">
 
-                  {getPreviewData.images?.[0] && (
+                  <div className="">
+                    {getPreviewData.images?.[0] && (
                     <img
                       src={getPreviewData.images[0]}
-                      className="w-full h-32 object-cover"
+                      className="w-full  object-contain"
                     />
                   )}
+                  </div>
 
                   <div className="p-2 flex flex-col gap-1">
                     <span className="text-xs text-gray-500 font-semibold">
