@@ -2,7 +2,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Theme } from "../../theme/globalTheme";
 import { useEffect, useState } from "react";
 
-import Sealion from '/sealion.jpg';
 import { useSocket } from "../../context/SocketContext";
 import { useRef } from "react";
 import { useAuth } from "../../context/AuthContex";
