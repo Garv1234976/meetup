@@ -13,6 +13,10 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    server: {
+      host: true,
+      port: 5173
+    },
     proxy: {
       '/socket.io': {
         target: 'https://meetup-instance.onrender.com',

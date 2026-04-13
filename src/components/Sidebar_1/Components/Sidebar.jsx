@@ -35,7 +35,7 @@ const SkeletonCard = ({ i }) => (
 );
 
 export function Sidebar_One({ token }) {
-  const { user,setUser } = useAuth();
+  const { user, setUser } = useAuth();
   const [active, setActive] = useState(null);
   const [open, setOpen] = useState(false);
   const { setIsProfile } = useContext(UserContext);
@@ -79,23 +79,25 @@ export function Sidebar_One({ token }) {
     setInvite(false);
   }
 
- 
+
 
   const tractBraodcastMessage = async () => {
     try {
       setIsLoading(true);
-      fetch(`${import.meta.env.VITE_BACK_DEV_API}/broadcasts`, {
-        method: "GET",
-        credentials: "include",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          // console.log(data?.broadcasts);
-          setTrackBraodCastData(data.broadcasts || []);
-        });
+
+      const res = await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/broadcasts`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await res.json();
+      setTrackBraodCastData(data.broadcasts || []);
     } catch (error) {
       console.log("Failed to fetch /broadcasts");
       setTrackBraodCastData([]);
@@ -104,120 +106,120 @@ export function Sidebar_One({ token }) {
     }
   };
 
-const handleAccept = async (senderId) => {
-  try {
-    const res = await fetch(
-      `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${senderId}/accept`,
-      {
-        method: "POST",
-        credentials: "include",
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    if (!res.ok) throw new Error();
-
-    const acceptedUser = requests.find((r) => r._id === senderId);
-
-    //  1. close popup
-    // setOpen(false);
-
-    //  2. instant UI update (OLD BEHAVIOR - KEEP THIS)
-    if (acceptedUser) {
-      window.dispatchEvent(
-        new CustomEvent("friend-added", {
-          detail: acceptedUser,
-        })
+  const handleAccept = async (senderId) => {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${senderId}/accept`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
-    }
 
-    //  3. fetch fresh user (SOURCE OF TRUTH)
-    const userRes = await fetch(
-      `${import.meta.env.VITE_BACK_DEV_API}/api/me`,
-      { credentials: "include" }
-    );
+      if (!res.ok) throw new Error();
 
-    const updated = await userRes.json();
-    setUser(updated.user);
+      const acceptedUser = requests.find((r) => r._id === senderId);
 
-    //  4. 🔥 get FULL friend with chatId
-    const fullFriend = updated.user.friends?.find(
-      (f) => f._id === senderId
-    );
+      //  1. close popup
+      // setOpen(false);
 
-    //  5. 🔥 FIX Messaging issue
-    if (fullFriend) {
-      setSelectedFriend({ ...fullFriend }); // IMPORTANT
-    }
-
-  } catch (err) {
-    console.error("Accept failed", err);
-  }
-};
-
-const handleDecline = async (senderId) => {
-  try {
-    // setOpen(false); 
-
-    await fetch(
-      `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${senderId}/decline`,
-      {
-        method: "POST",
-        credentials: "include",
-        headers: { Authorization: `Bearer ${token}` },
+      //  2. instant UI update (OLD BEHAVIOR - KEEP THIS)
+      if (acceptedUser) {
+        window.dispatchEvent(
+          new CustomEvent("friend-added", {
+            detail: acceptedUser,
+          })
+        );
       }
-    );
 
-    const res = await fetch(
-      `${import.meta.env.VITE_BACK_DEV_API}/api/me`,
-      { credentials: "include" }
-    );
-
-    const updated = await res.json();
-    setUser(updated.user);
-
-  } catch (err) {
-    console.error("Decline failed");
-  }
-};
-const handleAcceptAll = async () => {
-  try {
-    const res = await fetch(
-      `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/acceptall`,
-      {
-        method: "POST",
-        credentials: "include",
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-
-    if (!res.ok) throw new Error();
-
-    // ✅ 1. 🔥 INSTANT UI (LIKE SINGLE ACCEPT)
-    requests.forEach((req) => {
-      window.dispatchEvent(
-        new CustomEvent("friend-added", {
-          detail: req,
-        })
+      //  3. fetch fresh user (SOURCE OF TRUTH)
+      const userRes = await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/api/me`,
+        { credentials: "include" }
       );
-    });
 
-    // ✅ 2. clear request UI
-    setRequests([]);
+      const updated = await userRes.json();
+      setUser(updated.user);
 
-    // ✅ 3. refresh real data
-    const userRes = await fetch(
-      `${import.meta.env.VITE_BACK_DEV_API}/api/me`,
-      { credentials: "include" }
-    );
+      //  4. 🔥 get FULL friend with chatId
+      const fullFriend = updated.user.friends?.find(
+        (f) => f._id === senderId
+      );
 
-    const updated = await userRes.json();
-    setUser(updated.user);
+      //  5. 🔥 FIX Messaging issue
+      if (fullFriend) {
+        setSelectedFriend({ ...fullFriend }); // IMPORTANT
+      }
 
-  } catch (err) {
-    console.error("Accept all failed");
-  }
-};
+    } catch (err) {
+      console.error("Accept failed", err);
+    }
+  };
+
+  const handleDecline = async (senderId) => {
+    try {
+      // setOpen(false); 
+
+      await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${senderId}/decline`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      const res = await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/api/me`,
+        { credentials: "include" }
+      );
+
+      const updated = await res.json();
+      setUser(updated.user);
+
+    } catch (err) {
+      console.error("Decline failed");
+    }
+  };
+  const handleAcceptAll = async () => {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/acceptall`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!res.ok) throw new Error();
+
+      // ✅ 1. 🔥 INSTANT UI (LIKE SINGLE ACCEPT)
+      requests.forEach((req) => {
+        window.dispatchEvent(
+          new CustomEvent("friend-added", {
+            detail: req,
+          })
+        );
+      });
+
+      // ✅ 2. clear request UI
+      setRequests([]);
+
+      // ✅ 3. refresh real data
+      const userRes = await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/api/me`,
+        { credentials: "include" }
+      );
+
+      const updated = await userRes.json();
+      setUser(updated.user);
+
+    } catch (err) {
+      console.error("Accept all failed");
+    }
+  };
 
 
   const copyToClipboard = (link) => {
@@ -260,57 +262,57 @@ const handleAcceptAll = async () => {
   }, {});
 
   const sendInviteByCode = async () => {
-  if (!inviteInput.trim()) return;
+    if (!inviteInput.trim()) return;
 
-  try {
-    setInviteLoading(true);
+    try {
+      setInviteLoading(true);
 
-    const res = await fetch(
-      `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${inviteInput}`,
-      {
-        method: "GET",
-        credentials: "include",
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
+      const res = await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${inviteInput}`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
-    if (!res.ok) throw new Error();
+      if (!res.ok) throw new Error();
 
-    setInviteInput("");
+      setInviteInput("");
 
-    // ✅ SUCCESS ANIMATION
-    setInviteSuccess(true);
-    setTimeout(() => setInviteSuccess(false), 2000);
+      // ✅ SUCCESS ANIMATION
+      setInviteSuccess(true);
+      setTimeout(() => setInviteSuccess(false), 2000);
 
-  } catch (err) {
-    setInviteError(true);
-    setTimeout(() => setInviteError(false), 2000);
-  } finally {
-    setInviteLoading(false);
-  }
-};
-useEffect(() => {
-  if (user?.friendRequestsReceived) {
-    setRequests(user.friendRequestsReceived);
-  } else {
-    setRequests([]);
-  }
-}, [user]);
+    } catch (err) {
+      setInviteError(true);
+      setTimeout(() => setInviteError(false), 2000);
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+  useEffect(() => {
+    if (user?.friendRequestsReceived) {
+      setRequests(user.friendRequestsReceived);
+    } else {
+      setRequests([]);
+    }
+  }, [user]);
 
-useEffect(() => {
-  if (!open) return;
+  useEffect(() => {
+    if (!open) return;
 
-  fetch(`${import.meta.env.VITE_BACK_DEV_API}/api/me`, {
-    credentials: "include",
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      setUser(data.user); // 🔥 THIS IS KEY
+    fetch(`${import.meta.env.VITE_BACK_DEV_API}/api/me`, {
+      credentials: "include",
     })
-    .catch(() => {});
-}, [open]);
+      .then((res) => res.json())
+      .then((data) => {
+        setUser(data.user); // 🔥 THIS IS KEY
+      })
+      .catch(() => { });
+  }, [open]);
 
-// const requests = user?.friendRequestsReceived || [];
+  // const requests = user?.friendRequestsReceived || [];
 
   return (
     <>
@@ -387,7 +389,7 @@ useEffect(() => {
               <AnimatePresence>
                 {open && (
                   <motion.div
-                  key={JSON.stringify(requests)}
+                    key={JSON.stringify(requests)}
                     initial={{ opacity: 0, x: -40, scale: 0.8 }}
                     animate={{ opacity: 1, x: 0, scale: 1 }}
                     exit={{ opacity: 0, x: -50, scale: 0.8 }}
@@ -414,46 +416,46 @@ useEffect(() => {
                       <p className="text-xs">No new requests.</p>
                     ) : (
                       <AnimatePresence>
-                        <div className="h-50 overflow-y-scroll p-2" style={{scrollbarWidth: "none"}}>
+                        <div className="h-50 overflow-y-scroll p-2" style={{ scrollbarWidth: "none" }}>
                           {requests.map((req) => (
-                          <motion.div
-                            layout
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.6, x: 50 }}
-                            transition={{ duration: 0.2 }}
-                            key={req._id}
-                            className="request-item flex items-center justify-between mb-2 px-2 py-1 rounded-xl"
-                            style={{backgroundColor: Theme.thirdBackgroundColor}}
-                          >
-                            <div className="flex items-end gap-2">
-                              <img
-                                className="w-7 h-7 rounded-full"
-                                src={req.picture}
-                                alt={req.name}
-                              />
-                              <p className="text-xs font-semibold uppercase">
-                                {req.name}
-                              </p>
-                            </div>
-                            <div className="flex flex-col justify-between gap-2 p-1">
-                              <div className="flex gap-3">
-                                <button
-                                  onClick={() => handleDecline(req._id)}
-                                  className="bg-red-100 p-0.5 rounded-md text-xs"
-                                >
-                                  Decline
-                                </button>
-                                <button
-                                  onClick={() => handleAccept(req._id)}
-                                  className="bg-amber-300 p-1 rounded-md text-xs"
-                                >
-                                  Accept
-                                </button>
+                            <motion.div
+                              layout
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.6, x: 50 }}
+                              transition={{ duration: 0.2 }}
+                              key={req._id}
+                              className="request-item flex items-center justify-between mb-2 px-2 py-1 rounded-xl"
+                              style={{ backgroundColor: Theme.thirdBackgroundColor }}
+                            >
+                              <div className="flex items-end gap-2">
+                                <img
+                                  className="w-7 h-7 rounded-full"
+                                  src={req.picture}
+                                  alt={req.name}
+                                />
+                                <p className="text-xs font-semibold uppercase">
+                                  {req.name}
+                                </p>
                               </div>
-                            </div>
-                          </motion.div>
-                        ))}
+                              <div className="flex flex-col justify-between gap-2 p-1">
+                                <div className="flex gap-3">
+                                  <button
+                                    onClick={() => handleDecline(req._id)}
+                                    className="bg-red-100 p-0.5 rounded-md text-xs"
+                                  >
+                                    Decline
+                                  </button>
+                                  <button
+                                    onClick={() => handleAccept(req._id)}
+                                    className="bg-amber-300 p-1 rounded-md text-xs"
+                                  >
+                                    Accept
+                                  </button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          ))}
                         </div>
                       </AnimatePresence>
                     )}
@@ -548,83 +550,96 @@ useEffect(() => {
                 </p>
               </div>
 
-              {Object.entries(groupedBroadcasts).map(([date, items]) => (
-                <div key={date} className="mb-6">
-                  {/*  DATE HEADER */}
-                  <div className="flex justify-center mb-4 sticky top-0 z-20">
-                    <span className="bg-gray-200 text-gray-700 text-xs px-3 py-1 rounded-full shadow">
-                      {date}
+              {isLoading ? (
+                <>
+                  {[...Array(5)].map((_, i) => (
+                    <SkeletonCard key={i} i={i} />
+                  ))}
+                </>
+              ) :
+                Object.keys(groupedBroadcasts).length === 0 ? (
+                  <div className="text-gray-500 text-center flex flex-col items-center gap-2">
+                    <span className="text-3xl">🫤</span>
+                    <p className="font-semibold">No Annoucement</p>
+                    <span
+                      className="text-sm font-semibold hover:underline cursor-pointer"
+                      onClick={closeBoardCastModal}
+                    >
+                      Make a new Annoucement here !
                     </span>
                   </div>
+                ) : (
+                  Object.entries(groupedBroadcasts).map(([date, items]) => (
+                    <div key={date} className="mb-6">
 
-                  {/*  BROADCASTS */}
-                  {isLoading ? (
-                    <>
-                      {[...Array(5)].map((_, i) => (
-                        <SkeletonCard key={i} i={i} />
-                      ))}
-                    </>
-                  ) : items.length === 0 ? (
-                    <div className="text-center text-gray-400">
-                      No broadcasts yet
+                      {/*  DATE HEADER */}
+                      <div className="flex justify-center mb-4 sticky top-0 z-20">
+                        <span className="bg-gray-200 text-gray-700 text-xs px-3 py-1 rounded-full shadow">
+                          {date}
+                        </span>
+                      </div>
+
+                      {/*  BROADCASTS */}
+                      {
+                        items.map((d, i) => (
+                          <motion.div
+                            key={d?._id || i}
+                            layout
+                            initial={{ opacity: 0, scale: 0.8, x: -20 }}
+                            animate={{ opacity: 1, scale: 1, x: 0 }}
+                            exit={{ opacity: 0, scale: 0.7, x: 20 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 400,
+                              damping: 25,
+                            }}
+                            className="mb-3 flex justify-start"
+                          >
+                            <div className="max-w-[80%] bg-[#1e293b] rounded-2xl shadow-xl border border-white/10 p-3 relative backdrop-blur-md">
+                              {/* Header */}
+                              <div className="flex items-center justify-between mb-2 gap-4">
+                                <span className="text-[14px] bg-blue-500/90 text-white px-2 py-[2px] rounded-full font-semibold flex items-center gap-1">
+                                  <i className="fa-solid fa-bullhorn text-[10px]"></i>
+                                  BROADCAST
+                                </span>
+
+                                <span className="text-[14px] text-gray-400 font-semibold">
+                                  {new Date(d.createdAt).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
+                                </span>
+                              </div>
+
+                              {/* Message */}
+                              <div
+                                className="text-md text-gray-200 leading-relaxed break-words [&_*]:text-gray-200"
+                                dangerouslySetInnerHTML={{ __html: d?.text }}
+                              />
+
+                              {/* Footer */}
+                              <div className="flex items-center justify-end gap-4 mt-3 text-[10px] text-gray-400">
+                                <span className="flex items-center gap-1 text-sm">
+                                  <i className="fa-regular fa-eye text-white"></i>{" "}
+                                  {d.seenCount}
+                                </span>
+
+                                <span className="flex items-center gap-1">
+                                  <i className="fa-solid fa-users"></i>{" "}
+                                  {d.totalRecipients}
+                                </span>
+                              </div>
+
+                              <div className="absolute inset-0 rounded-2xl pointer-events-none bg-gradient-to-tr from-blue-500/10 via-transparent to-transparent"></div>
+                            </div>
+                          </motion.div>
+                        ))
+                      }
                     </div>
-                  ) : (
-                    items.map((d, i) => (
-                      <motion.div
-                        key={d?._id || i}
-                        layout
-                        initial={{ opacity: 0, scale: 0.8, x: -20 }}
-                        animate={{ opacity: 1, scale: 1, x: 0 }}
-                        exit={{ opacity: 0, scale: 0.7, x: 20 }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 400,
-                          damping: 25,
-                        }}
-                        className="mb-3 flex justify-start"
-                      >
-                        <div className="max-w-[80%] bg-[#1e293b] rounded-2xl shadow-xl border border-white/10 p-3 relative backdrop-blur-md">
-                          {/* Header */}
-                          <div className="flex items-center justify-between mb-2 gap-4">
-                            <span className="text-[14px] bg-blue-500/90 text-white px-2 py-[2px] rounded-full font-semibold flex items-center gap-1">
-                              <i className="fa-solid fa-bullhorn text-[10px]"></i>
-                              BROADCAST
-                            </span>
+                  ))
+                )
+              }
 
-                            <span className="text-[14px] text-gray-400 font-semibold">
-                              {new Date(d.createdAt).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </span>
-                          </div>
-
-                          {/* Message */}
-                          <div
-                            className="text-md text-gray-200 leading-relaxed break-words [&_*]:text-gray-200"
-                            dangerouslySetInnerHTML={{ __html: d?.text }}
-                          />
-
-                          {/* Footer */}
-                          <div className="flex items-center justify-end gap-4 mt-3 text-[10px] text-gray-400">
-                            <span className="flex items-center gap-1 text-sm">
-                              <i className="fa-regular fa-eye text-white"></i>{" "}
-                              {d.seenCount}
-                            </span>
-
-                            <span className="flex items-center gap-1">
-                              <i className="fa-solid fa-users"></i>{" "}
-                              {d.totalRecipients}
-                            </span>
-                          </div>
-
-                          <div className="absolute inset-0 rounded-2xl pointer-events-none bg-gradient-to-tr from-blue-500/10 via-transparent to-transparent"></div>
-                        </div>
-                      </motion.div>
-                    ))
-                  )}
-                </div>
-              ))}
             </motion.div>
           </motion.div>
         )}
@@ -679,7 +694,7 @@ useEffect(() => {
                 {/* {user.inviteNumber} */}
               </p>
 
-              <div className="flex gap-3 items-center px-2 text-[#333] font-semibold rounded-md" style={{background: Theme.thirdBackgroundColor}}>
+              <div className="flex gap-3 items-center px-2 text-[#333] font-semibold rounded-md" style={{ background: Theme.thirdBackgroundColor }}>
                 <span>{user.inviteNumber}</span>
                 <i className="fa-regular fa-copy cursor-pointer" onClick={() => copyToClipboard(user.inviteNumber)}></i>
               </div>
@@ -739,29 +754,29 @@ useEffect(() => {
         )}
 
         {inviteSuccess && (
-        <motion.div
-          initial={{ opacity: 0, y: -40, scale: 0.8 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -40, scale: 0.8 }}
-          transition={{ type: "spring", stiffness: 400, damping: 20 }}
-          className="fixed top-5 right-5 bg-green-500 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 z-[9999]"
-        >
-          <span className="text-lg">✅</span>
-          <span className="text-sm font-medium">Request Sent</span>
-        </motion.div>
-      )}
-      {inviteError && (
-        <motion.div
-          initial={{ opacity: 0, y: -40, scale: 0.8 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -40, scale: 0.8 }}
-          transition={{ type: "spring", stiffness: 400, damping: 20 }}
-          className="fixed top-5 right-5 bg-red-500 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 z-[9999]"
-        >
-          <span className="text-lg">❌</span>
-          <span className="text-sm font-medium">Invalid Code</span>
-        </motion.div>
-      )}
+          <motion.div
+            initial={{ opacity: 0, y: -40, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -40, scale: 0.8 }}
+            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            className="fixed top-5 right-5 bg-green-500 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 z-[9999]"
+          >
+            <span className="text-lg">✅</span>
+            <span className="text-sm font-medium">Request Sent</span>
+          </motion.div>
+        )}
+        {inviteError && (
+          <motion.div
+            initial={{ opacity: 0, y: -40, scale: 0.8 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -40, scale: 0.8 }}
+            transition={{ type: "spring", stiffness: 400, damping: 20 }}
+            className="fixed top-5 right-5 bg-red-500 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 z-[9999]"
+          >
+            <span className="text-lg">❌</span>
+            <span className="text-sm font-medium">Invalid Code</span>
+          </motion.div>
+        )}
       </AnimatePresence>
     </>
   );

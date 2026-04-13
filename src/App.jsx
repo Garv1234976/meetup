@@ -3,10 +3,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import MainApp from "./components/App";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 import { Theme } from "./theme/globalTheme";
-import { animate } from "animejs";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContex";
-
+import { useAppReady } from './hooks/useAppReady'
+import Logo from '/public/logo.svg'
 /**
  *
  * @param {*} ClientId for authenticate from Oauth
@@ -16,33 +16,55 @@ import { useAuth } from "./context/AuthContex";
 function App({ clientId }) {
   const [startAnim, setStartAnim] = useState(false);
   const [showMainApp, setShowMainApp] = useState(false);
+  const [checkedAuthRedirect, setCheckedAuthRedirect] = useState(false);
+  const [hasLoggedIn, setHasLoggedIn] = useState(false);
   const navigate = useNavigate();
-  const { setUser } = useAuth();
+  const { setUser, user , loading} = useAuth();
+  const { ready } = useAppReady();
 
   const handleClick = () => {
     setStartAnim(true);
   };
 
-  useEffect(() => {
-    const animation = animate(".dots", {
-      y: [
-        { to: "-0.75rem", ease: "outExpo", duration: 600 },
-        { to: 0, ease: "outBounce", duration: 800, delay: 100 },
-      ],
-      rotate: {
-        from: "-1turn",
-        delay: 0,
-      },
+if (loading || !ready) {
+  return (
+    <div className="h-screen flex flex-col items-center justify-center bg-[#90e0ef]">
+  
+  <img src={Logo} alt="logo" className="w-60 mb-6 opacity-90" />
 
-      delay: (_, i) => i * 100,
-      loopDelay: 800,
-      loop: true,
-      direction: "alternate",
-    });
+  <div className="w-52 h-[5px] bg-black/10 rounded-full overflow-hidden">
+    <motion.div
+      className="h-full bg-blue-600"
+      initial={{ width: "0%" }}
+      animate={{ width: "100%" }}
+      transition={{ duration: 1.5, ease: "easeInOut", repeat: Infinity }}
+    />
+  </div>
+</div>
+  );
+}
 
-    return () => animation?.pause(); // cleanup on unmount
-  }, []);
+if (user && !startAnim) {
+  setTimeout(() => {
+    navigate("/chats");
+  }, 100); 
 
+  return (
+    <div className="h-screen flex flex-col items-center justify-center bg-[#90e0ef]">
+  
+  <img src={Logo} alt="logo" className="w-60 mb-6 opacity-90" />
+
+  <div className="w-52 h-[5px] bg-black/10 rounded-full overflow-hidden">
+    <motion.div
+      className="h-full bg-blue-600"
+      initial={{ width: "0%" }}
+      animate={{ width: "100%" }}
+      transition={{ duration: 1.5, ease: "easeInOut", repeat: Infinity }}
+    />
+  </div>
+</div>
+  );
+}
   return (
     <>
       <AnimatePresence>
@@ -73,9 +95,7 @@ function App({ clientId }) {
               transition={{ duration: 1.5, ease: "circIn" }}
               onAnimationComplete={() => {
                 if (startAnim) {
-                  setTimeout(() => {
-                    setShowMainApp(true);
-                  }, 300);
+                  navigate("/chats");
                 }
               }}
             />
@@ -126,9 +146,6 @@ function App({ clientId }) {
                                 setUser(data.user);
                                 // console.log(" Token verified:", data);
                                 setStartAnim(true); //  Start the animation -> show MainApp
-                                setTimeout(() => {
-                                  navigate("/chats");
-                                }, 2000);
                               } else {
                                 console.error(
                                   "❌ Token verification failed:",

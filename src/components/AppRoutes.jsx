@@ -6,6 +6,8 @@ import App from "../App"; // your login screen
 import PersonalInfo from "./Profile/PersonalInfo";
 import GroupChat from "./Group";
 import { CreateChannel } from "./CreateChannel/CreateChannel";
+import { VideoCall } from "./VideoCall/VideoCall";
+import { RoomJoin } from "./VideoCall/RoomJoin";
 
 export default function AppRoutes({ clientId }) {
   return (
@@ -43,6 +45,22 @@ export default function AppRoutes({ clientId }) {
           </ProtectedRoute>
         }
       />
+      {/* <Route
+        path="/video"
+        element={
+          // <ProtectedRoute>
+            <VideoCall/>
+          // </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/joinroom"
+        element={
+          <ProtectedRoute>
+            <RoomJoin/>
+          </ProtectedRoute>
+        }
+      /> */}
     </Routes>
   );
 }

@@ -7,7 +7,7 @@ import { UserProvider } from "../context/Profile";
 export default function MainApp() {
   return (
     <>
-      <SocketProvider>
+      {/* <SocketProvider> */}
         <TypingProvider>
           <UserProvider>
             <div className="flex">
@@ -16,7 +16,7 @@ export default function MainApp() {
             </div>
           </UserProvider>
         </TypingProvider>
-      </SocketProvider>
+      {/* </SocketProvider> */}
     </>
   );
 }

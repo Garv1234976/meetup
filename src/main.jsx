@@ -9,6 +9,7 @@ import { BrowserRouter , HashRouter} from "react-router-dom";
 import AppRoutes from "./components/AppRoutes.jsx";
 import { Provider } from "react-redux";
 import { store } from "./redux/store.js";
+import { SocketProvider } from "./context/SocketContext.jsx";
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 console.log("Google Client ID:", clientId);
 if (!clientId) {
@@ -23,7 +24,9 @@ createRoot(document.getElementById("root")).render(
   <Provider store={store}>
     <BrowserRouter>
       <AuthProvider>
+        <SocketProvider>
         <AppRoutes clientId={clientId} />
+        </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
   </Provider>

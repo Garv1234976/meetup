@@ -43,8 +43,8 @@ export function CreateChannel({ token }) {
 
     //  FINAL CREATE
     const handleSubmit = () => {
-        if (!image || !channelName.trim()) {
-            alert("Image and channel name are required");
+        if (!channelName.trim()) {
+            alert("Channel name is required");
             return;
         }
 
@@ -101,18 +101,60 @@ export function CreateChannel({ token }) {
             ]);
         }
     };
-    const handleAddMembers = () => {
+    // const handleAddMembers = () => {
+    //     if (!selectedFriends.length) {
+    //         alert("Select at least one friend");
+    //         return;
+    //     }
+
+    //     setIsCreating(true);
+
+    //     // simulate process
+    //     setTimeout(() => {
+    //         navigate("/chats");
+    //     }, 2500);
+    // };
+
+    const handleAddMembers = async () => {
         if (!selectedFriends.length) {
             alert("Select at least one friend");
             return;
         }
 
-        setIsCreating(true);
+        try {
+            setIsCreating(true);
 
-        // simulate process
-        setTimeout(() => {
-            navigate("/chats");
-        }, 2500);
+            const res = await fetch(
+                `${import.meta.env.VITE_BACK_DEV_API}/createChannel`,
+                {
+                    method: "POST",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({
+                        name: channelName,
+                        description,
+                        selectedFriends,
+                    }),
+                }
+            );
+
+            if (!res.ok) throw new Error();
+
+            const data = await res.json();
+
+            // optional: use returned channel
+            console.log("Created channel:", data.channel);
+
+            setTimeout(() => {
+                navigate("/chats");
+            }, 2500);
+
+        } catch (err) {
+            console.error("Channel create failed", err);
+        }
     };
     return (
         <AnimatePresence>
