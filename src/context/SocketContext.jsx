@@ -183,7 +183,7 @@ useEffect(() => {
 
 
   return (
-    <SocketContext.Provider value={{ socket, isReady, channelMessages, channelPinned, channelUnread, setActiveChannel,setChannelUnread,channelOnline }}>
+    <SocketContext.Provider value={{ socket, isReady, channelMessages, channelPinned, channelUnread, setActiveChannel,setChannelUnread,channelOnline, setChannelMessages, setChannelPinned }}>
       {children}
     </SocketContext.Provider>
   );

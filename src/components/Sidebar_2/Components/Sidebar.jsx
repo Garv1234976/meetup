@@ -18,7 +18,7 @@ import { useSocket } from "../../../context/SocketContext";
 import { useNavigate } from "react-router-dom";
 import { ChannelMessage } from "../../ChannelMessage/ChaneelMessage";
 import { useAuth } from "../../../context/AuthContex";
-
+import MeetUplogo from '/m.svg'
 const templates = {
   1: `
     <p>👋 <b>Hello Everyone</b>,</p>
@@ -98,7 +98,7 @@ const templates = {
   `,
 };
 
-export function Sidebar_Two({ token }) {
+export function Sidebar_Two({ token ,setOpenInvite,resetKey  }) {
   const off = useOnline();
   const {user} = useAuth()
   const { socket, channelUnread } = useSocket();
@@ -122,8 +122,11 @@ export function Sidebar_Two({ token }) {
   const [broadcastError, setBroadcastError] = useState(false);
   const [createChannleModal, setCreateChannleModal] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState(null);
-
+  const [friendsOnly, setFriendsOnly] = useState([]);
+  const [noFriendModal, setNoFriendModal] = useState(false);
   const navigate = useNavigate()
+
+  
   const handleEscKey = useCallback(
     (event) => {
       if (event.key === "Escape") {
@@ -162,6 +165,7 @@ export function Sidebar_Two({ token }) {
         const myChannel = data?.myChannel || [];
         const joinChannel = data?.joinChannel || [];
 
+        setFriendsOnly(friends);
         // channel merge
         const allChannel = [...myChannel, ...joinChannel].map((c) => ({
           ...c,
@@ -283,19 +287,14 @@ export function Sidebar_Two({ token }) {
     setSelectedChannel(channel);
     setSelectedFriend(null);
   };
-  if (isProfile) {
-    return (
-      <div className="w-[65%] p-4 flex flex-col gap-4 bg-gray-500">
-        <button
-          onClick={() => setIsProfile(false)}
-          className="h-6 w-6 bg-blue-400 text-white rounded-full text-sm cursor-pointer"
-        >
-          <li className="fa-solid fa-arrow-left"></li>
-        </button>
-        <UserProfile />
-      </div>
-    );
-  }
+
+
+  useEffect(() => {
+  setSelectedFriend(null);
+  setSelectedChannel(null);
+  setIsOpen(false);
+  setCreateChannleModal(false);
+}, [resetKey]);
 
   const pickedFriends = friends.filter((f) =>
     selectedUsers.includes(String(f._id)),
@@ -305,32 +304,64 @@ export function Sidebar_Two({ token }) {
 
   const visibleFriends = pickedFriends.slice(0, MAX_VISIBLE);
   const extraCount = pickedFriends.length - MAX_VISIBLE;
-  const filteredFriends = friends.filter((f) =>
+
+  const filteredFriends = friendsOnly.filter((f) =>
     f.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
+
+  // console.log(JSON.stringify(filteredFriends))
   const getEditorHtml = () => {
     const content = editorState.getCurrentContent();
     return draftToHtml(convertToRaw(content));
   };
 
+
+    if (isProfile) {
+    return (
+      <>
+      <div className="w-full p-4 flex flex-col gap-4 " style={{background: Theme.primaryBackgroundColor}}>
+        <div>
+          <button
+          onClick={() => setIsProfile(false)}
+          className=""
+        >
+          <li className="fa-solid fa-xmark bg-red-500 px-4 py-2 rounded text-white cursor-pointer text-lg mb-4"></li>
+        </button>
+        <UserProfile />
+        </div>
+      </div>
+        </>
+    );
+  }
+
+  const filteredChatList = friends.filter((f) => {
+  const text = searchTerm.toLowerCase();
+
+  return (
+    f.name?.toLowerCase().includes(text) ||
+    f.email?.toLowerCase().includes(text)
+  );
+});
   return (
     <>
       <div
-        className=" w-[100%] md:w-[30%] "
+        className=" w-[100%] md:w-[33%] "
         style={{ backgroundColor: Theme.secondaryBackgroundColor }}
       >
         <div className="flex justify-between px-5">
-          <div className="flex gap-4">
+          {/* <div className="flex gap-4">
             <p className="font-semibold">Chats</p>
             <p className="font-semibold">Streams</p>
-          </div>
+          </div> */}
           {!off && <h1>Offline</h1>}
           <div>
-            <i className="fa-solid fa-tower-broadcast"></i>
+            {/* <i className="fa-solid fa-tower-broadcast"></i> */}
           </div>
         </div>
         <div className="flex justify-center px-4  items-center gap-1">
           <input
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full p-1 my-4 rounded"
             type="search"
             placeholder="Search Chats or Starts a new Chats"
@@ -352,7 +383,15 @@ export function Sidebar_Two({ token }) {
           style={{ scrollbarGutter: "stable" }}
         >
           <AnimatePresence>
-            {friends.map((friend, i) => (
+            {filteredChatList.length === 0 ? (
+              <div className="flex items-center justify-center py-3 ">
+                <div onClick={() => setOpenInvite(true)} className="bg-blue-500 flex items-end gap-5 px-3 py-1 rounded-md mt-50 cursor-pointer">
+                  <i className="fa-solid fa-person-circle-plus text-xl text-white"></i>
+                <span className="flex text-white text-sm font-semibold">Add Friend</span>
+                </div>
+              </div>
+            ) : ''}
+            {filteredChatList.map((friend, i) => (
               <motion.div
                 layout
                 initial={{ opacity: 0, scale: 0.8, x: -20 }}
@@ -383,8 +422,8 @@ export function Sidebar_Two({ token }) {
               >
                 <div className="flex gap-2 ">
                   <img
-                    className="w-10 h-10 rounded-full mix-blend-multiply"
-                    src={friend.picture}
+                    className="w-10 h-10 rounded-full mix-blend-multiply object-contain"
+                    src={friend.picture || MeetUplogo}
                     alt={`profile picture of ${friend.name}`}
                   />
                   <div className="flex flex-col">
@@ -443,11 +482,11 @@ export function Sidebar_Two({ token }) {
 
 
       {selectedChannel ? (
-        <ChannelMessage channelid={selectedChannel._id} fullchannelobject={selectedChannel} />
+        <ChannelMessage channelid={selectedChannel._id} fullchannelobject={selectedChannel} onBack={() => setSelectedChannel(null)}/>
       ) : selectedFriend ? (
         <Messaging
           slectedFriends={selectedFriend}
-          onBack={() => setSelectedFriend(null)}
+          onBack={() => {setSelectedFriend(null);setSelectedChannel(null)}}
         />
       ) : (
         <div
@@ -468,13 +507,20 @@ export function Sidebar_Two({ token }) {
           <div className="flex justify-center pt-10">
             <div className="flex gap-10">
               <button
-                className="relative glow-wrapper px-5 py-2 rounded-md font-bold outline-none"
+                className="relative glow-wrapper px-5 py-2 rounded-md font-bold outline-none cursor-pointer"
                 onClick={openModal}
               >
                 <span className="relative">BroadCast</span>
               </button>
 
-              <button onClick={() => navigate('/channel')} className="rounded-md font-bold border border-blue-400 hover:text-white hover:bg-blue-600 px-4 py-1 flex gap-2 items-center">
+              <button onClick={() => {
+                if (friendsOnly.length === 0) {
+                  setNoFriendModal(true);
+                } else {
+                  navigate("/channel");
+                }
+              }} 
+              className="rounded-md font-bold border border-blue-400 hover:text-white hover:bg-blue-600 px-4 py-1 flex gap-2 items-center cursor-pointer">
                 <span><i className="fa-solid fa-bullhorn"></i> </span>Create Channel
               </button>
             </div>
@@ -504,9 +550,10 @@ export function Sidebar_Two({ token }) {
               {/* CLOSE BUTTON */}
               <span
                 onClick={closeModal}
-                className="absolute top-3 right-3 bg-gray-400 px-3 py-1 rounded-md font-bold cursor-pointer"
+                className="absolute top-3 right-3 rounded-md font-bold cursor-pointer"
               >
-                ESC
+                                  <i className="fa-solid fa-xmark bg-red-500 px-4 py-1 rounded text-white cursor-pointer" title="close"></i>
+
               </span>
 
               <div className="p-4 h-full overflow-hidden">
@@ -783,15 +830,25 @@ export function Sidebar_Two({ token }) {
               exit={{ opacity: 0, y: -20, scale: 0.9 }}
               transition={{ duration: 0.2 }}
             >
-              <div className="flex justify-end py-2 px-2">
+              <div className="flex justify-end py-2 gap-52 px-2 items-start">
+
+                
+                <div className="flex justify-center  ">
+                  <span className="rounded-md font-bold border border-blue-400 hover:text-white hover:bg-blue-600 px-4 py-1 cursor-pointer">
+                    Select Template here !
+                  </span>
+                </div>
+
                 <div
                   onClick={closeTemplate}
-                  className="bg-gray-400 px-3 py-1 rounded-md font-bold cursor-pointer"
+                  className=" rounded-md font-bold cursor-pointer"
                 >
-                  ESC
+                  <i className="fa-solid fa-xmark bg-red-500 px-4 py-1 rounded text-white cursor-pointer" title="close"></i>
                 </div>
+                
               </div>
               <div className="p-3">
+                
                 <div
                   className="grid grid-cols-4 gap-40 overflow-auto"
                   style={{ scrollbarWidth: "none" }}
@@ -844,11 +901,7 @@ export function Sidebar_Two({ token }) {
                     </div>
                   ))}
                 </div>
-                <div className="flex justify-center py-4">
-                  <span className="rounded-md font-bold border border-blue-400 hover:text-white hover:bg-blue-600 px-4 py-1 cursor-pointer">
-                    Select Template here !
-                  </span>
-                </div>
+                
               </div>
             </motion.div>
           </motion.div>
@@ -872,9 +925,10 @@ export function Sidebar_Two({ token }) {
               <div className="flex justify-end">
                 <button
                   onClick={() => setSelectedTemplate(null)}
-                  className="bg-gray-400 px-3 py-1 rounded-md font-bold"
+                  className="rounded-md font-bold"
                 >
-                  Close
+                                    <i className="fa-solid fa-xmark bg-red-500 px-4 py-1 rounded text-white cursor-pointer" title="close"></i>
+
                 </button>
               </div>
 
@@ -1016,7 +1070,60 @@ export function Sidebar_Two({ token }) {
             </span>
           </motion.div>
         )}
+
+
+
+
+        {noFriendModal && (
+    <motion.div
+      className="fixed inset-0 bg-black/50 flex justify-center items-center z-[9999]"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        className="bg-white p-6 rounded-2xl shadow-xl w-[300px] text-center"
+        initial={{ scale: 0.7, y: 40 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.7, y: 40 }}
+      >
+        <div className="text-3xl mb-2">😕</div>
+
+        <h2 className="text-lg font-semibold mb-2">
+          No Friends Found
+        </h2>
+
+        <p className="text-sm text-gray-600 mb-4">
+          Please add friends first before creating a channel.
+        </p>
+
+        <div className="flex gap-3 justify-center">
+          
+          {/* Add Friend */}
+          <button
+            onClick={() => {
+              setNoFriendModal(false);
+              setOpenInvite(true); // 🔥 opens your invite modal
+            }}
+            className="bg-blue-500 text-white px-3 py-1 rounded-md text-sm"
+          >
+            Add Friends
+          </button>
+
+          {/* Close */}
+          <button
+            onClick={() => setNoFriendModal(false)}
+            className="bg-gray-300 px-3 py-1 rounded-md text-sm"
+          >
+            Cancel
+          </button>
+
+        </div>
+      </motion.div>
+    </motion.div>
+  )}
       </AnimatePresence>
+        
     </>
   );
 }

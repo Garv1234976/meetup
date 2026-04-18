@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { Theme } from "../../../theme/globalTheme";
 import { data, Link, useNavigate } from "react-router-dom";
 import { UserContext } from "../../../context/Profile";
@@ -8,6 +8,12 @@ import GroupChat from "../../Group";
 import { QRCode } from "react-qrcode-logo";
 import Logo from "/public/m.svg";
 import { useAuth } from "../../../context/AuthContex";
+import { driver } from "driver.js";
+import "driver.js/dist/driver.css";
+
+
+
+
 const SkeletonCard = ({ i }) => (
   <motion.div
     key={i}
@@ -34,7 +40,7 @@ const SkeletonCard = ({ i }) => (
   </motion.div>
 );
 
-export function Sidebar_One({ token }) {
+export function Sidebar_One({ token, openInvite, setOpenInvite,onReset  }) {
   const { user, setUser } = useAuth();
   const [active, setActive] = useState(null);
   const [open, setOpen] = useState(false);
@@ -48,11 +54,76 @@ export function Sidebar_One({ token }) {
   const [BroadCastModal, SetBroadCastModal] = useState(false);
   const [trackBraodCastData, setTrackBraodCastData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [invite, setInvite] = useState(false);
+  // const [invite, setInvite] = useState(false);
   const [inviteInput, setInviteInput] = useState("");
   const [inviteLoading, setInviteLoading] = useState(false);
   const [inviteSuccess, setInviteSuccess] = useState(false);
   const [inviteError, setInviteError] = useState(false);
+  const [copyTick, setCopyTick] = useState(false);
+  const [showTourPrompt, setShowTourPrompt] = useState(false);
+  
+  const driverObj = driver({
+  showProgress: true,
+  steps: [
+    {
+      element: '#addFriend',
+      popover: {
+        title: 'Add Friends',
+        description: 'Click here to invite your friends and start chatting together.',
+      },
+    },
+    {
+      element: '#inviteFriendModal',
+      popover: {
+        title: 'Invite Options',
+        description: 'You can invite friends using a QR code, link, or invite ID.',
+      },
+    },
+    {
+      element: '#scanQrcodetoinvitefriend',
+      popover: {
+        title: 'Scan QR Code',
+        description: 'Ask your friend to scan this QR code to connect instantly.',
+      }
+    },
+    {
+      element: '#yourinviteid',
+      popover: {
+        title: 'Your Invite ID',
+        description: 'Share this unique ID with your friend so they can send you a request.',
+      }
+    },
+    {
+      element: '#actionbutton',
+      popover: {
+        title: 'Enter Invite Code',
+        description: 'Paste your friend’s invite code here and click "Add" to connect.',
+      }
+    }
+  ]
+});
+  
+const startTour = () => {
+  setShowTourPrompt(false);
+  driverObj.drive();
+  localStorage.setItem("isaddFriendTourComplete", "true");
+};
+
+const skipTour = () => {
+  setShowTourPrompt(false);
+  localStorage.setItem("isaddFriendTourComplete", "true");
+};
+
+useEffect(() => {
+  const seen = localStorage.getItem("isaddFriendTourComplete");
+
+  if (!seen) {
+    setTimeout(() => {
+      setShowTourPrompt(true);
+    }, 800); // slight delay for better UX
+  }
+}, []);
+
   function openModal() {
     setIsOpen(true);
   }
@@ -73,10 +144,11 @@ export function Sidebar_One({ token }) {
   }
 
   function openInviteModal() {
-    setInvite(true);
+    setOpenInvite(true);
   }
+
   function closeInviteModal() {
-    setInvite(false);
+    setOpenInvite(false);
   }
 
 
@@ -122,7 +194,7 @@ export function Sidebar_One({ token }) {
       const acceptedUser = requests.find((r) => r._id === senderId);
 
       //  1. close popup
-      // setOpen(false);
+      setOpen(false);
 
       //  2. instant UI update (OLD BEHAVIOR - KEEP THIS)
       if (acceptedUser) {
@@ -159,7 +231,7 @@ export function Sidebar_One({ token }) {
 
   const handleDecline = async (senderId) => {
     try {
-      // setOpen(false); 
+      setOpen(false); 
 
       await fetch(
         `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${senderId}/decline`,
@@ -223,19 +295,25 @@ export function Sidebar_One({ token }) {
 
 
   const copyToClipboard = (link) => {
-    navigator.clipboard
-      .writeText(link)
-      .then(() => {
-        setCopied(link);
-        setAlertVisible(true);
-        setTimeout(() => {
-          setAlertVisible(false);
-        }, 2000);
-      })
-      .catch((err) => {
-        console.error("Failed to copy text: ", err);
-      });
-  };
+  navigator.clipboard
+    .writeText(link)
+    .then(() => {
+      setCopied(link);
+      setAlertVisible(true);
+
+      // ✅ show check icon
+      setCopyTick(true);
+
+      // ⏳ revert after 2 sec
+      setTimeout(() => {
+        setCopyTick(false);
+        setAlertVisible(false);
+      }, 2000);
+    })
+    .catch((err) => {
+      console.error("Failed to copy text: ", err);
+    });
+};
 
   const groupedBroadcasts = trackBraodCastData.reduce((acc, item) => {
     const date = new Date(item.createdAt);
@@ -317,13 +395,13 @@ export function Sidebar_One({ token }) {
   return (
     <>
       <div
-        className="w-[15%] sm:w-[10%] md:w-[5%]"
+        className="group w-[15%] sm:w-[10%] md:w-[4%] hover:md:w-[6%] transition-all duration-75 "
         style={{ backgroundColor: Theme.thirdBackgroundColor }}
       >
-        <div className="flex items-center justify-between h-screen flex-col py-5">
+        <div className="flex items-center justify-between h-screen flex-col py-5 ">
           <div className="flex flex-col gap-5  lg:text-xl text-sm ">
             <i className="fa-solid fa-bars cursor-pointer"></i>
-            <i
+            {/* {<i
               className="fa-solid fa-message cursor-pointer"
               title="Chats"
               onClick={() => setIsProfile(false)}
@@ -333,9 +411,9 @@ export function Sidebar_One({ token }) {
                     ? Theme.button.active
                     : Theme.button.inactive,
               }}
-            ></i>
+            ></i>} */}
             {/* <i className="fa-solid fa-code  cursor-pointer " title="Code"></i> */}
-            <i
+            {/* {<i
               className="fa-solid fa-video cursor-pointer"
               title="Video calls"
               onClick={() => handleClick("vid")}
@@ -345,8 +423,8 @@ export function Sidebar_One({ token }) {
                     ? Theme.button.active
                     : Theme.button.inactive,
               }}
-            ></i>
-            <i
+            ></i>} */}
+            {/* {<i
               className="fa-solid fa-users-line cursor-pointer"
               title="Plugins"
               onClick={() => {
@@ -359,34 +437,113 @@ export function Sidebar_One({ token }) {
                     ? Theme.button.active
                     : Theme.button.inactive,
               }}
-            ></i>
+            ></i>} */}
           </div>
           <div className="flex flex-col gap-3 lg:text-xl text-sm">
             {/* <i className="fa-solid fa-hand-point-up"></i> */}
-            <i className="fa-solid fa-user-plus cursor-pointer" onClick={openInviteModal}></i>
-            <i
-              className="fa-solid fa-bullhorn cursor-pointer"
-              title="BroadCast"
+            <div 
+            id="Home"
+              // onClick={openInviteModal}
+              onClick={() => {
+                setIsProfile(false);
+                setOpen(false);
+                setOpenInvite(false);
+                onReset();
+              }}
+              
+              className="flex flex-col items-center py-2 rounded-md cursor-pointer
+                          bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200"
+              title="Home"
+            >
+              <i
+              
+                className="fa-solid fa-house text-xl"
+              ></i>
+
+              <span className="text-[10px] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                HOME
+              </span>
+            </div>
+            <div 
+            id="addFriend"
+              onClick={openInviteModal}
+              
+              className="flex flex-col items-center py-2 rounded-md cursor-pointer
+                          bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200"
+              title="Invite Friends"
+            >
+              <i
+              
+                className="fa-solid fa-user-plus text-xl"
+              ></i>
+
+              <span className="text-[10px] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                FRIENDS
+              </span>
+            </div>
+
+
+            <div
               onClick={() => {
                 openBoardCastModal();
                 tractBraodcastMessage();
               }}
-            ></i>
-            <div>
+              className="flex flex-col items-center py-2 px-1 rounded-md cursor-pointer
+                          bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200" title="BroadCast">
+              <i
+                className="fa-solid fa-bullhorn cursor-pointer text-xl"
+
+
+              ></i>
+              <span className="text-[10px] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-all duration-200">BROADCAST</span>
+            </div>
+
+
+
+              
+            <div
+              onClick={() => setOpen(!open)}
+              title="Requests"
+              className=" flex flex-col items-center py-2 rounded-md cursor-pointer
+                          bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200">
               <div
-                onClick={() => setOpen(!open)}
-                className="flex   justify-center items-end"
+
+                className="flex flex-col items-center"
               >
-                <div className="">
-                  {open ? (
-                    <i className="fa-regular fa-envelope-open cursor-pointer"></i>
-                  ) : (
-                    <i className="fa-regular fa-envelope cursor-pointer"></i>
-                  )}
-                </div>
-                <span className="bg-black p-[4px] rounded-full   absolute "></span>
+                {open ? (
+                  <i className="fa-regular fa-envelope-open cursor-pointer text-xl"></i>
+                ) : (
+                  <i className="fa-regular fa-envelope cursor-pointer text-xl"></i>
+                )}
+
+               {requests.length > 0 &&  <span className="bg-red-600 p-[4px] rounded-full   absolute "></span>}
+                <span className="text-[10px] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-all duration-200">REQUESTS</span>
               </div>
-              <AnimatePresence>
+              
+              
+            </div>
+                  {/* {requests.length > 0 && (
+  <div className="absolute left-20 bottom-[36%] z-50">
+    
+    
+    <div className="absolute left-[-6px] top-3 w-3 h-3 bg-blue-400 rotate-45"></div>
+
+    
+    <div className="bg-blue-400 px-3 py-2 rounded-md shadow-lg flex flex-col gap-2">
+      
+      {requests.map((req) => (
+        <img
+          key={req._id}
+          className="rounded-full w-7 h-7 object-cover"
+          src={req.picture}
+          alt=""
+        />
+      ))}
+
+    </div>
+  </div>
+)} */}
+            <AnimatePresence>
                 {open && (
                   <motion.div
                     key={JSON.stringify(requests)}
@@ -399,9 +556,13 @@ export function Sidebar_One({ token }) {
                       damping: 20,
                       mass: 0.6,
                     }}
-                    className="popup absolute bottom-1/12 rounded-lg left-12 md:left-15 bg-blue-300 z-20 p-2 w-70"
+                    className="popup absolute bottom-1/12 rounded-lg left-12 md:left-15 bg-blue-300 z-20 p-2 "
                   >
-                    <div className="flex  items-center gap-1 justify-between ">
+                    <div className="flex">
+                    
+                    <div>
+                      <div className="flex justify-end py-2 "><i onClick={() => setOpen(!open)}  className="fa-solid fa-xmark bg-red-500 px-2 py-0.5 rounded text-white cursor-pointer" title="close"></i></div>
+                      <div className="flex  items-center gap-1 justify-between ">
                       <h3>Friend Requests</h3>
                       {/* {forSender?.friendRequestsReceived?.length > 0 ? (
                         <div className="bg-black w-4 h-4 rounded-full text-white text-[0.6rem]  text-center flex items-center justify-center font-semibold">
@@ -410,13 +571,15 @@ export function Sidebar_One({ token }) {
                       ) : (
                         ""
                       )} */}
-                      <button onClick={handleAcceptAll} className="text-xs bg-blue-500 px-2 rounded-xl font-semibold text-white">accept all</button>
+                      {requests.length > 0 && (<button onClick={handleAcceptAll} className="text-xs bg-blue-500 px-2 rounded-xl font-semibold text-white">accept all</button>)}
                     </div>
+                    
                     {requests.length === 0 ? (
                       <p className="text-xs">No new requests.</p>
                     ) : (
                       <AnimatePresence>
-                        <div className="h-50 overflow-y-scroll p-2" style={{ scrollbarWidth: "none" }}>
+                        <div className="h-56 overflow-y-scroll p-2" style={{ scrollbarWidth: "none" }}>
+                          {/* {[...requests,...requests,...requests,...requests,...requests,...requests,...requests,...requests,...requests,...requests,...requests].map((req) => ( */}
                           {requests.map((req) => (
                             <motion.div
                               layout
@@ -442,13 +605,13 @@ export function Sidebar_One({ token }) {
                                 <div className="flex gap-3">
                                   <button
                                     onClick={() => handleDecline(req._id)}
-                                    className="bg-red-100 p-0.5 rounded-md text-xs"
+                                    className="bg-red-100 p-0.5 rounded-md text-xs cursor-pointer"
                                   >
                                     Decline
                                   </button>
                                   <button
                                     onClick={() => handleAccept(req._id)}
-                                    className="bg-amber-300 p-1 rounded-md text-xs"
+                                    className="bg-amber-300 p-1 rounded-md text-xs cursor-pointer"
                                   >
                                     Accept
                                   </button>
@@ -462,7 +625,7 @@ export function Sidebar_One({ token }) {
                     <div className="flex flex-col justify-center items-center mt-2">
                       <div className="flex items-center gap-2 bg-gray-200  rounded-sm">
                         <button
-                          className="text-xs font-medium px-1"
+                          className="text-xs font-medium px-1 cursor-pointer"
                           onClick={() =>
                             copyToClipboard(
                               `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${user.inviteNumber}`,
@@ -477,10 +640,10 @@ export function Sidebar_One({ token }) {
                               `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${user.inviteNumber}`,
                             )
                           }
-                          className="fa-solid fa-copy text-white bg-gray-500 p-1  text-xs font-medium rounded-tr-sm rounded-br-sm"
+                          className="cursor-pointer fa-solid fa-copy text-white bg-gray-500 p-1  text-xs font-medium rounded-tr-sm rounded-br-sm"
                         ></i>
                         {alertVisible && (
-                          <div className="fixed mt-2 top-0 right-0 bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-4 shadow-md flex items-start gap-3 max-w-sm transition-transform">
+                          <div className="fixed mt-2 top-0 right-0 bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-4 shadow-md flex items-start gap-3 max-w-sm transition-transform ">
                             <span className="text-blue-500 text-xl">✓</span>
                             <div className="flex-1">
                               <p className="font-semibold">
@@ -501,17 +664,27 @@ export function Sidebar_One({ token }) {
                         copy url then Share{" "}
                       </span>
                     </div>
+                    </div>
+                    </div>
+
                   </motion.div>
                 )}
               </AnimatePresence>
+
+            <div onClick={() => setIsProfile(true)} className="flex flex-col items-center py-2 rounded-md cursor-pointer
+                          bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200">
+              <i
+                className="fa-solid fa-user"
+                
+              ></i>
+              <span className="text-[10px] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-all duration-200">PROFILE</span>
             </div>
 
-            <i
-              className="fa-solid fa-user"
-              onClick={() => setIsProfile(true)}
-            ></i>
-
-            <i className="fa-solid fa-gear"></i>
+            {/* <div className="flex flex-col items-center py-2 rounded-md cursor-pointer
+                          bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200">
+              <i className="fa-solid fa-gear"></i>
+              <span className="text-[10px] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-all duration-200">SETTINGS</span>
+            </div> */}
           </div>
         </div>
 
@@ -544,9 +717,10 @@ export function Sidebar_One({ token }) {
               <div className="flex justify-end py-2 sticky top-0 z-20">
                 <p
                   onClick={closeBoardCastModal}
-                  className=" bg-gray-400 px-3 py-1 rounded-md font-bold cursor-pointer"
+                  className="px-3 py-1 rounded-md font-bold cursor-pointer"
                 >
-                  ESC
+                                  <i   className="fa-solid fa-xmark bg-red-500 px-3 py-1.5 rounded text-white cursor-pointer" title="close"></i>
+
                 </p>
               </div>
 
@@ -643,7 +817,7 @@ export function Sidebar_One({ token }) {
             </motion.div>
           </motion.div>
         )}
-        {invite && (
+        {openInvite && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -659,14 +833,15 @@ export function Sidebar_One({ token }) {
                 stiffness: 400,
                 damping: 25,
               }}
+              id="inviteFriendModal"
               className="relative w-[90%] max-w-sm bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl p-5 flex flex-col items-center gap-4 border border-white/20"
             >
               {/* CLOSE BUTTON */}
               <button
                 onClick={closeInviteModal}
-                className="absolute top-3 right-3 text-gray-500 hover:text-black text-lg"
+                className="absolute top-3 right-3 text-white px-2 rounded-md hover:text-black text-lg"
               >
-                Esc
+                <i   className="fa-solid fa-xmark bg-red-500 px-2 py-0.5 rounded text-white cursor-pointer" title="close"></i>
               </button>
 
               {/* TITLE */}
@@ -675,7 +850,7 @@ export function Sidebar_One({ token }) {
               </h2>
 
               {/* QR BOX */}
-              <div className="bg-white p-3 rounded-xl shadow-inner border border-gray-200">
+              <div id="scanQrcodetoinvitefriend" className="bg-white p-3 rounded-xl shadow-inner border border-gray-200">
                 <QRCode
                   value={`${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${user?.inviteNumber}`}
                   logoImage={Logo}
@@ -689,18 +864,33 @@ export function Sidebar_One({ token }) {
               </div>
 
               {/* INVITE LINK */}
-              <p className="text-[11px] text-gray-500 text-center break-all">
+              {/* <p className="text-[11px] text-gray-500 text-center break-all">
                 {`${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${user.inviteNumber}`}
-                {/* {user.inviteNumber} */}
-              </p>
+              </p> */}
 
-              <div className="flex gap-3 items-center px-2 text-[#333] font-semibold rounded-md" style={{ background: Theme.thirdBackgroundColor }}>
+             <div className="flex gap-2" id="yourinviteid">
+              <span>Your Invite ID</span>
+               
+                <div className="flex gap-3 items-center px-2 text-[#333] font-semibold rounded-md" style={{ background: Theme.thirdBackgroundColor }}>
                 <span>{user.inviteNumber}</span>
-                <i className="fa-regular fa-copy cursor-pointer" onClick={() => copyToClipboard(user.inviteNumber)}></i>
+                <motion.i
+                key={copyTick ? "check" : "copy"}
+                initial={{ scale: 0.6, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.2 }}
+                className={
+                  copyTick
+                    ? "fa-solid fa-check text-green-600"
+                    : "fa-regular fa-copy cursor-pointer"
+                }
+                onClick={() => !copyTick && copyToClipboard(user.inviteNumber)}
+              />
               </div>
 
+             </div>
+
               {/* ACTION BUTTONS */}
-              <div className="flex gap-3 w-full">
+              <div  className="flex gap-3 w-full">
                 <button
                   onClick={() =>
                     copyToClipboard(
@@ -715,7 +905,7 @@ export function Sidebar_One({ token }) {
                 <button
                   onClick={() =>
                     navigator.share?.({
-                      title: "Add me",
+                      title: "Join me on chat",
                       text: "Join me on chat",
                       url: `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${user?.inviteNumber}`,
                     })
@@ -730,7 +920,7 @@ export function Sidebar_One({ token }) {
                   Or enter invite code
                 </p>
 
-                <div className="flex gap-2">
+                <div  id="actionbutton" className="flex gap-2">
                   <input
                     type="text"
                     placeholder="Enter 10-digit code"
@@ -778,6 +968,85 @@ export function Sidebar_One({ token }) {
           </motion.div>
         )}
       </AnimatePresence>
+      <AnimatePresence>
+  {showTourPrompt && (
+    <motion.div
+      initial={{ opacity: 0, y: -40 }}
+      animate={{ opacity: 1, y: 20 }}
+      exit={{ opacity: 0, y: -40 }}
+      transition={{ duration: 0.3 }}
+      className="fixed  top-0 left-1/2 -translate-x-1/2 z-[9999]"
+    >
+       <div className="bg-white shadow-xl border border-gray-200 rounded-xl px-4 py-3 flex flex-col  gap-4">
+        
+        <div className="flex items-center  gap-3">
+          <div>
+          <p className="text-sm font-semibold text-gray-800">
+            Take a quick tour?
+          </p>
+        </div>
+        <div className="flex ">
+          <button
+            onClick={skipTour}
+            className="text-xs px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200"
+          >
+            Skip
+          </button>
+
+        </div>
+        </div>
+
+       <div className="grid grid-cols-1 gap-2">
+
+         <div className="flex items-baseline gap-2">
+          <p className="text-xs text-gray-500">
+            Learn how to add friends and use features.
+          </p>
+          <button
+            onClick={startTour}
+            className="text-xs px-3 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600"
+          >
+            Start
+          </button>
+        </div>
+
+         <div className="flex items-baseline gap-2 justify-between">
+          <p className="text-xs text-gray-500">
+            Learn How to Broadcast your  message.
+          </p>
+          <button
+            onClick={startTour}
+            className="text-xs px-3 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600"
+          >
+            Start
+          </button>
+        </div>
+
+         <div className="flex items-baseline gap-2 justify-between">
+          <p className="text-xs text-gray-500">
+            Learn How to Create Channel.
+          </p>
+          <button
+            onClick={startTour}
+            className="text-xs px-3 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600"
+          >
+            Start
+          </button>
+        </div>
+        
+
+       </div>
+      <div className="flex items-center justify-between px-2 font-semibold text-xs">
+          <span>
+          Complete
+        </span>
+        <span>1/3</span>
+      </div>
+      </div>
+    
+    </motion.div>
+  )}
+</AnimatePresence>
     </>
   );
 }

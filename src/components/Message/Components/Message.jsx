@@ -31,9 +31,8 @@ const SkeletonBubble = ({ isFromFriend }) => {
       className={`flex ${isFromFriend ? "justify-start" : "justify-end"} px-3`}
     >
       <motion.div
-        className={`relative overflow-hidden rounded-2xl ${
-          isFromFriend ? "rounded-tl-none" : "rounded-tr-none"
-        }`}
+        className={`relative overflow-hidden rounded-2xl ${isFromFriend ? "rounded-tl-none" : "rounded-tr-none"
+          }`}
         style={{
           height: `${Math.random() * 40 + 20}px`,
           width: `${Math.random() * 120 + 110}px`,
@@ -81,17 +80,18 @@ export function Messaging({ slectedFriends, onBack }) {
   // const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
   const prevMsgCountRef = useRef(0);
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
 
   // Fetch messages on chat change
-useEffect(() => {
-  if (!slectedFriends?.chatId) return;
+  useEffect(() => {
+    if (!slectedFriends?.chatId) return;
 
-  setLoadingMessages(true); // 🔥 ADD THIS
+    setLoadingMessages(true); // 🔥 ADD THIS
 
-  dispatch(fetchLastTwoDaysMessages(slectedFriends.chatId))
-    .finally(() => setLoadingMessages(false));
+    dispatch(fetchLastTwoDaysMessages(slectedFriends.chatId))
+      .finally(() => setLoadingMessages(false));
 
-}, [slectedFriends?.chatId]);
+  }, [slectedFriends?.chatId]);
 
   useEffect(() => {
     if (!socket || !slectedFriends?.chatId) return;
@@ -148,29 +148,29 @@ useEffect(() => {
     return groups;
   }, [messages]);
   // Auto scroll to bottom
-useEffect(() => {
-  const prevCount = prevMsgCountRef.current;
-  const currentCount = messages.length;
+  useEffect(() => {
+    const prevCount = prevMsgCountRef.current;
+    const currentCount = messages.length;
 
-  const isNewChat = prevCount === 0 && currentCount > 0;
-  const isNewMessage = currentCount > prevCount;
+    const isNewChat = prevCount === 0 && currentCount > 0;
+    const isNewMessage = currentCount > prevCount;
 
-  if (isNewChat || isNewMessage) {
+    if (isNewChat || isNewMessage) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 0); //  wait for DOM paint
+    }
+
+    prevMsgCountRef.current = currentCount;
+  }, [messages]);
+
+  useEffect(() => {
+    prevMsgCountRef.current = 0;
+
     setTimeout(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 0); //  wait for DOM paint
-  }
-
-  prevMsgCountRef.current = currentCount;
-}, [messages]);
-
-useEffect(() => {
-  prevMsgCountRef.current = 0;
-
-  setTimeout(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
-  }, 50); // small delay for fetch render
-}, [slectedFriends?._id]);
+      messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+    }, 50); // small delay for fetch render
+  }, [slectedFriends?._id]);
 
   /**
    *  actions and commands
@@ -275,17 +275,42 @@ useEffect(() => {
 
 
   useEffect(() => {
-  if (!socket || !messages) return;
+    if (!socket || !messages) return;
 
-  messages.forEach((msg) => {
-    if (msg.broadcastId) {
-      // console.log("📡 sending seen:", msg.broadcastId);
-      socket.emit("broadcast_seen", {
-        broadcastId: msg.broadcastId,
-      });
+    messages.forEach((msg) => {
+      if (msg.broadcastId) {
+        // console.log("📡 sending seen:", msg.broadcastId);
+        socket.emit("broadcast_seen", {
+          broadcastId: msg.broadcastId,
+        });
+      }
+    });
+  }, [messages]);
+  const confirmRemoveFriend = async () => {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/friends/${slectedFriends._id}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
+
+      const data = await res.json();
+
+      setShowRemoveModal(false);
+      onBack();
+
+    } catch (err) {
+      console.log("Remove failed");
     }
-  });
-}, [messages]);
+  };
+
+
+  const handleRemoveFriend = () => {
+    setShowRemoveModal(true);
+  };
+
   return (
     <>
       <div
@@ -296,7 +321,7 @@ useEffect(() => {
         <header className="sticky top-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center gap-3 z-10 border-b border-gray-100 dark:border-gray-700">
           <i
             onClick={onBack}
-            className="fa-solid fa-arrow-left text-xl text-black"
+            className="fa-solid fa-arrow-left text-xl text-white cursor-pointer"
           ></i>
 
           {loadingMessages ? (
@@ -323,7 +348,7 @@ useEffect(() => {
           )}
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-gray-800 dark:text-gray-100">
+              <span className="font-semibold text-gray-800 dark:text-gray-100 capitalize ">
                 {slectedFriends.name}
               </span>
               <span className="w-2 h-2 bg-green-500 rounded-full "></span>
@@ -335,6 +360,16 @@ useEffect(() => {
               </span>
             )}
           </div>
+
+          <div>
+            <button
+              onClick={handleRemoveFriend}
+              className="ml-auto text-red-500 cursor-pointer"
+            >
+              <i className="fa-solid fa-user-minus text-xl"></i>
+            </button>
+          </div>
+
         </header>
 
         {/* Messages Container */}
@@ -366,9 +401,8 @@ useEffect(() => {
                       return (
                         <div
                           key={msg._id || msg.timestamp}
-                          className={`flex w-full  ${
-                            isFromFriend ? "justify-start" : "justify-end"
-                          }`}
+                          className={`flex w-full  ${isFromFriend ? "justify-start" : "justify-end"
+                            }`}
                           onMouseEnter={() => setHoveredMessageId(msg._id)}
                           onMouseLeave={() => {
                             setHoveredMessageId(null);
@@ -377,17 +411,15 @@ useEffect(() => {
                         >
                           {/* MESSAGE ROW */}
                           <div
-                            className={`flex items-center max-w-[80%] md:max-w-[65%] ${
-                              isFromFriend ? "flex-row-reverse" : "flex-row"
-                            }`}
+                            className={`flex items-center max-w-[80%] md:max-w-[65%] ${isFromFriend ? "flex-row-reverse" : "flex-row"
+                              }`}
                           >
                             {/* EMOJI BUTTON (HOVER ONLY) */}
                             <div
-                              className={`relative transition-all duration-200 cursor-pointer ${
-                                hoveredMessageId === msg._id
+                              className={`relative transition-all duration-200 cursor-pointer ${hoveredMessageId === msg._id
                                   ? "opacity-100 scale-100"
                                   : "opacity-100 scale-75"
-                              } ${isFromFriend ? "ml-1" : "mr-1"}`}
+                                } ${isFromFriend ? "ml-1" : "mr-1"}`}
                             >
                               <div
                                 className="px-2 py-1 bg-white/80 backdrop-blur rounded-full shadow cursor-pointer flex items-center gap-1"
@@ -414,9 +446,8 @@ useEffect(() => {
                                       duration: 0.2,
                                       ease: "easeOut",
                                     }}
-                                    className={`absolute bottom-full mb-2 flex gap-2 bg-white p-2 rounded-full shadow-lg origin-bottom ${
-                                      isFromFriend ? "left-0" : "right-0"
-                                    }`}
+                                    className={`absolute bottom-full mb-2 flex gap-2 bg-white p-2 rounded-full shadow-lg origin-bottom ${isFromFriend ? "left-0" : "right-0"
+                                      }`}
                                   >
                                     {["❤️", "😂", "👍", "😢"].map((emoji) => (
                                       <span
@@ -436,11 +467,10 @@ useEffect(() => {
 
                             {/* MESSAGE BUBBLE */}
                             <div
-                              className={`px-4 py-2 text-sm rounded-2xl shadow-md relative break-words whitespace-pre-wrap max-w-xl ${
-                                isFromFriend
+                              className={`px-4 py-2 text-sm rounded-2xl shadow-md relative break-words whitespace-pre-wrap max-w-xl ${isFromFriend
                                   ? "bg-white text-gray-800 rounded-tl-none"
                                   : "bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-tr-none"
-                              }`}
+                                }`}
                             >
                               {/* TEXT */}
                               {msg?.broadcastId ? (
@@ -454,11 +484,10 @@ useEffect(() => {
                               )}
                               {/* TIME */}
                               <div
-                                className={`text-[10px] mt-1 ${
-                                  isFromFriend
+                                className={`text-[10px] mt-1 ${isFromFriend
                                     ? "text-gray-500"
                                     : "text-blue-100"
-                                } text-right`}
+                                  } text-right`}
                               >
                                 {new Date(msg.timestamp).toLocaleTimeString(
                                   [],
@@ -475,9 +504,8 @@ useEffect(() => {
                                   initial={{ scale: 0, y: 10 }}
                                   animate={{ scale: 1, y: 0 }}
                                   exit={{ scale: 0, y: 10 }}
-                                  className={`absolute -bottom-2 ${
-                                    isFromFriend ? "left-2" : "right-2"
-                                  } flex items-center gap-1 bg-white/90 backdrop-blur px-2 py-[2px] rounded-full shadow-md`}
+                                  className={`absolute -bottom-2 ${isFromFriend ? "left-2" : "right-2"
+                                    } flex items-center gap-1 bg-white/90 backdrop-blur px-2 py-[2px] rounded-full shadow-md`}
                                 >
                                   {[
                                     ...new Set(
@@ -590,6 +618,53 @@ useEffect(() => {
           </form>
         </footer>
       </div>
+      <AnimatePresence>
+        {showRemoveModal && (
+          <motion.div
+            className="fixed inset-0 bg-black/40 flex justify-center items-center z-[9999]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="bg-white p-6 rounded-2xl shadow-xl w-[300px] text-center"
+              initial={{ scale: 0.7, y: 40 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.7, y: 40 }}
+            >
+              <div className="text-2xl mb-2">⚠️</div>
+
+              <h2 className="text-lg font-semibold mb-2">
+                Remove Friend?
+              </h2>
+
+              <p className="text-sm text-gray-500 mb-4">
+                Are you sure you want to remove this friend?
+              </p>
+
+              <div className="flex gap-3 justify-center">
+
+                {/* Cancel */}
+                <button
+                  onClick={() => setShowRemoveModal(false)}
+                  className="bg-gray-300 px-3 py-1 rounded-md text-sm"
+                >
+                  Cancel
+                </button>
+
+                {/* Confirm */}
+                <button
+                  onClick={confirmRemoveFriend}
+                  className="bg-red-500 text-white px-3 py-1 rounded-md text-sm"
+                >
+                  Remove
+                </button>
+
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

@@ -137,6 +137,7 @@ export function CreateChannel({ token }) {
                         name: channelName,
                         description,
                         selectedFriends,
+                        isPublic: true,
                     }),
                 }
             );
@@ -218,7 +219,7 @@ export function CreateChannel({ token }) {
                                 </span>
 
                                 {/* IMAGE */}
-                                <label className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center cursor-pointer overflow-hidden">
+                                {/* <label className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center cursor-pointer overflow-hidden">
                                     {preview ? (
                                         <img
                                             src={preview}
@@ -233,7 +234,7 @@ export function CreateChannel({ token }) {
                                         onChange={handleImageChange}
                                         className="hidden"
                                     />
-                                </label>
+                                </label> */}
 
                                 {/* INPUTS */}
                                 <div className="w-full flex flex-col gap-3">

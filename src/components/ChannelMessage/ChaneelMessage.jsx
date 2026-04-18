@@ -9,8 +9,10 @@ import { useNavigate } from "react-router-dom";
 export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const { user } = useAuth();
   const channel = fullchannelobject;
-  const { socket, isReady, channelMessages,channelPinned, setActiveChannel, channelUnread, setChannelUnread,channelOnline  } = useSocket();
-  
+  console.log({ channel });
+
+  const { socket, isReady, channelMessages, channelPinned, setActiveChannel, channelUnread, setChannelUnread, channelOnline, setChannelMessages,setChannelPinned } = useSocket();
+
 
   const [showMenu, setShowMenu] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
@@ -21,21 +23,21 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const [getPreviewData, setGetPreviewData] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-  
+
   // const [messages, setMessages] = useState([]);
-  
+
   const messages = channelMessages[channelid] || [];
 
   const [hoveredMessageIndex, setHoveredMessageIndex] = useState(null);
   const [reactionMenuOpenIndex, setReactionMenuOpenIndex] = useState(null);
-  
+
   // const [pinnedMessages, setPinnedMessages] = useState([]);
   const pinnedIds = channelPinned[channelid] || [];
   const pinnedMessages = pinnedIds
-  .map((id) =>
-    messages.find((m) => String(m._id) === String(id))
-  )
-  .filter(Boolean);
+    .map((id) =>
+      messages.find((m) => String(m._id) === String(id))
+    )
+    .filter(Boolean);
   const [activePinIndex, setActivePinIndex] = useState(0);
   const [highlightedMsg, setHighlightedMsg] = useState(null);
   const [highlightedIndex, setHighlightedIndex] = useState(null);
@@ -45,21 +47,21 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const navigate = useNavigate();
   const seenMessagesRef = useRef(new Set());
   const isAdmin = String(user._id) === String(channel.creator);
-  
-  
+  const textareaRef = useRef(null);
+
   useEffect(() => {
-  setActiveChannel(channelid);
+    setActiveChannel(channelid);
 
-  // 🔥 reset unread when opening
-  setChannelUnread((prev) => ({
-    ...prev,
-    [channelid]: 0,
-  }));
+    // 🔥 reset unread when opening
+    setChannelUnread((prev) => ({
+      ...prev,
+      [channelid]: 0,
+    }));
 
-  return () => {
-    setActiveChannel(null);
-  };
-}, [channelid]);
+    return () => {
+      setActiveChannel(null);
+    };
+  }, [channelid]);
   useEffect(() => {
     const handleEsc = (e) => {
       if (e.key === "Escape") {
@@ -73,28 +75,46 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   }, []);
 
 
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+
+    el.style.height = "auto";
+
+    const maxHeight = 120;
+
+    if (el.scrollHeight > maxHeight) {
+      el.style.height = maxHeight + "px";
+      el.style.overflowY = "auto";
+    } else {
+      el.style.height = el.scrollHeight + "px";
+      el.style.overflowY = "hidden";
+    }
+  }, [message]);
 
 
 
-useEffect(() => {
-  setChannelUnread((prev) => ({
-    ...prev,
-    [channelid]: 0,
-  }));
-}, [channelid]);
 
 
-useEffect(() => {
-  socket.emit("join_channel", { channelId: channelid });
-
-  // return () => {
-  //   socket.emit("leave_channel", { channelId: channelid });
-  // };
-}, [channelid]);
-
+  useEffect(() => {
+    setChannelUnread((prev) => ({
+      ...prev,
+      [channelid]: 0,
+    }));
+  }, [channelid]);
 
 
-  
+  useEffect(() => {
+    socket.emit("join_channel", { channelId: channelid });
+
+    // return () => {
+    //   socket.emit("leave_channel", { channelId: channelid });
+    // };
+  }, [channelid]);
+
+
+
+
   useEffect(() => {
     if (!socket) return;
 
@@ -198,19 +218,55 @@ useEffect(() => {
 
 
 
+  useEffect(() => {
+  const loadChannel = async () => {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/channels/${channelid}`,
+        {
+          credentials: "include",
+        }
+      );
 
-useEffect(() => {
-  const unlockAudio = () => {
-    notificationAudio.current?.play().then(() => {
-      notificationAudio.current.pause();
-      notificationAudio.current.currentTime = 0;
-    }).catch(() => {});
-    
-    window.removeEventListener("click", unlockAudio);
+      const data = await res.json();
+
+      if (!res.ok) return;
+
+      //  LOAD MESSAGES
+      setChannelMessages((prev) => ({
+        ...prev,
+        [channelid]: data.messages || [],
+      }));
+
+      // ✅ LOAD PINNED
+      setChannelPinned((prev) => ({
+        ...prev,
+        [channelid]: data.pinnedMessages || [],
+      }));
+
+    } catch (err) {
+      console.log("Hydration failed");
+    }
   };
 
-  window.addEventListener("click", unlockAudio);
-}, []);
+  if (channelid) {
+    loadChannel();
+  }
+}, [channelid]);
+
+
+  useEffect(() => {
+    const unlockAudio = () => {
+      notificationAudio.current?.play().then(() => {
+        notificationAudio.current.pause();
+        notificationAudio.current.currentTime = 0;
+      }).catch(() => { });
+
+      window.removeEventListener("click", unlockAudio);
+    };
+
+    window.addEventListener("click", unlockAudio);
+  }, []);
 
   const handleReaction = (msgIndex, emoji) => {
     const msg = messages[msgIndex];
@@ -228,7 +284,7 @@ useEffect(() => {
     <>
       <AnimatePresence>
         <div
-          className="max-md:hidden w-[65%] h-screen flex flex-col"
+          className="max-md:hidden w-[65%] h-screen flex flex-col overflow-hidden"
           style={{ backgroundColor: Theme.primaryBackgroundColor }}
         >
           {/*  HEADER (same as chat) */}
@@ -249,31 +305,42 @@ useEffect(() => {
                 <div className="flex flex-col items-start">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-gray-800">
-                    {channel?.name}
-                  </span>
-                  {channelOnline && (
-                  <p className="text-sm text-green-800 font-semibold px-2 rounded-md bg-green-300" >
-                    {channelOnline[channelid] || 0} online
-                  </p>
-                  )}
+                      {channel?.name}
+                    </span>
+                    {channelOnline && (
+                      <p className="text-sm text-green-800 font-semibold px-2 rounded-md bg-green-300" >
+                        {channelOnline[channelid] || 0} online
+                      </p>
+                    )}
                   </div>
 
                   <span className="text-xs text-gray-500">
                     {channel?.totalSubscribers} subscribers
                   </span>
-                  
+
                 </div>
               </div>
 
 
-             {isAdmin && (
-               <a href={`${import.meta.env.VITE_VIDEO_CALL_API}`} target="_blank" className="bg-blue-400 px-3 py-2 rounded-xl" >
-                <div className="flex items-center gap-2">
-                  <i className="fa-solid fa-video text-white"></i>
-                  <span className="font-semibold text-sm">Start Video</span>
-                </div>
-              </a>
-             )}
+              {/* {isAdmin && (
+                <a href={`${import.meta.env.VITE_VIDEO_CALL_API}`} target="_blank" className="bg-blue-400 px-3 py-2 rounded-xl" >
+                  <div className="flex items-center gap-2">
+                    <i className="fa-solid fa-video text-white"></i>
+                    <span className="font-semibold text-sm">Start Video</span>
+                  </div>
+                </a>
+              )} */}
+              <div
+                onClick={() => {
+                  const link = `${import.meta.env.VITE_BACK_DEV_API}/join/${channel.inviteCode}`;
+                  navigator.clipboard.writeText(link);
+                  alert("Invite link copied!");
+                }}
+                className="flex gap-10 items-center cursor-pointer hover:bg-blue-100 py-1 px-2 rounded-md"
+              >
+                {/* <i className="fa-solid fa-link"></i> */}
+                <span>Share Invite Link</span>
+              </div>
               <div className="flex items-center gap-4">
                 <i className="fa-solid fa-magnifying-glass text-lg text-blue-400 hover:text-black cursor-pointer h-10 pt-3 "></i>
                 <i onClick={() => setShowInfo(true)} className="fa-solid fa-table-columns text-lg text-blue-400 hover:text-black cursor-pointer h-10 pt-3"></i>
@@ -284,7 +351,7 @@ useEffect(() => {
 
 
           {pinnedMessages.length > 0 && (
-            <motion.div className="absolute top-14 w-[65%] z-20 "
+            <motion.div className="absolute top-14 w-[62%] z-20 "
               key="pinned-bar"
               initial={{ y: -30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -398,12 +465,12 @@ useEffect(() => {
           )}
 
           {/*  BODY (EMPTY STATE FOR NOW) */}
-          <main className="flex-1 flex px-6 ">
+          <main className="flex-1 px-6 overflow-hidden">
 
             <div
               ref={containerRef}
               id="chat-container"
-              className="w-full relative flex flex-col gap-1 h-[84vh]  overflow-y-auto scroll-smooth" style={{ scrollbarWidth: 'none' }} >
+              className="w-full h-full flex flex-col gap-1 overflow-y-auto scroll-smooth" style={{ scrollbarWidth: 'none' }} >
               <div className="flex flex-col mt-auto  gap-2 pb-5 pt-15">
                 <div className="absolute top-0 right-[50%] ">
                   {/* <span className="bg-gray-500 font-semibold text-sm px-2 rounded-md text-white">
@@ -479,7 +546,7 @@ useEffect(() => {
 
                             {msg.preview.images?.[0] && (
                               <img
-                                src={msg.preview.images[0] || msg.preview.favicons?.[0] }
+                                src={msg.preview.images[0] || msg.preview.favicons?.[0]}
                                 className="w-full object-cover rounded-bl-lg rounded-r-md"
                               />
                             )}
@@ -489,56 +556,53 @@ useEffect(() => {
 
                       {/* MESSAGE TEXT */}
                       <span className="break-all">{msg.text}</span>
+                      <div className="flex items-center justify-between gap-3">
+                        {/*  REACTION PILLS (BOTTOM LEFT) */}
+                        <AnimatePresence>
+                          {msg.reactions && Object.values(msg.reactions).some(v => v > 0) && (
+                            <motion.div
+                              key="reactions"
+                              initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: 10, scale: 0.9 }}
+                              transition={{ duration: 0.25 }}
+
+                              className="flex gap-1"
+                            >
+                              {Object.entries(msg.reactions)
+                                .filter(([_, count]) => count > 0)
+                                .map(([emoji, count], i) => (
+                                  <motion.span
+                                    key={emoji}
+
+                                    initial={{ opacity: 0, y: 15, scale: 0.5 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.5 }}
+
+                                    transition={{
+                                      delay: i * 0.05,
+                                      type: "spring",
+                                      stiffness: 500,
+                                      damping: 20,
+                                    }}
+                                    whileTap={{ scale: 1.3 }}
+                                    className="bg-white px-2 py-[2px] rounded-full text-xs shadow flex items-center gap-1"
+                                  >
+                                    {emoji}  {count}
+                                  </motion.span>
+                                ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
 
 
-
-                      {/*  REACTION PILLS (BOTTOM LEFT) */}
-                      <AnimatePresence>
-                        {msg.reactions && Object.values(msg.reactions).some(v => v > 0) && (
-                          <motion.div
-                            key="reactions"
-                            initial={{ opacity: 0, y: 10, scale: 0.9 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.9 }}
-                            transition={{ duration: 0.25 }}
-
-                            className="absolute bottom-1 left-2 flex flex-wrap gap-1"
-                          >
-                            {Object.entries(msg.reactions)
-                              .filter(([_, count]) => count > 0)
-                              .map(([emoji, count], i) => (
-                                <motion.span
-                                  key={emoji}
-
-                                  initial={{ opacity: 0, y: 15, scale: 0.5 }}
-                                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                                  exit={{ opacity: 0, scale: 0.5 }}
-
-                                  transition={{
-                                    delay: i * 0.05, // 🔥 stagger effect
-                                    type: "spring",
-                                    stiffness: 500,
-                                    damping: 20,
-                                  }}
-
-                                  whileTap={{ scale: 1.3 }}
-
-                                  className="bg-white px-2 py-[2px] rounded-full text-xs shadow flex items-center gap-1"
-                                >
-                                  {emoji} {count}
-                                </motion.span>
-                              ))}
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      
-                      {/* FOOTER */}
-                      <div className="flex justify-end text-xs text-gray-200 mt-1 gap-2">
-                        <span className="text-xs text-white">
-                        <i className="fa-solid fa-eye"></i> {msg.seenCount || 0}
-                      </span>
-                        {msg.time}
+                        {/* FOOTER */}
+                        <div className="flex justify-end text-xs text-gray-200 mt-1 gap-2">
+                          <span className="text-xs text-white">
+                            <i className="fa-solid fa-eye"></i> {msg.seenCount || 0}
+                          </span>
+                          {msg.time}
+                        </div>
                       </div>
 
                       {/* MESSAGE TAIL */}
@@ -590,11 +654,13 @@ useEffect(() => {
           </main>
 
           {/*  FOOTER (DISABLED INPUT FOR NOW) */}
-          <div className="absolute bottom-20 right-2">
+
+          {/* <div className="absolute bottom-20 right-2">
             <div className="bg-[#00d9ff] p-3 w-10 h-10 rounded-full ">
               <i className="fa-solid fa-chevron-down font-semibold"></i>
             </div>
-          </div>
+          </div> */}
+
           {showPreview && (
             <motion.div
               className="absolute bottom-20 px-3 w-72"
@@ -618,11 +684,11 @@ useEffect(() => {
 
                   <div className="">
                     {getPreviewData.images?.[0] && (
-                    <img
-                      src={getPreviewData.images[0]}
-                      className="w-full  object-contain"
-                    />
-                  )}
+                      <img
+                        src={getPreviewData.images[0]}
+                        className="w-full  object-contain"
+                      />
+                    )}
                   </div>
 
                   <div className="p-2 flex flex-col gap-1">
@@ -650,10 +716,10 @@ useEffect(() => {
               )}
             </motion.div>
           )}
-          <footer className="p-4 border-t bg-white flex items-center gap-2">
+          {/* <footer className="p-4 border-t bg-white flex items-center gap-2">
             {String(user._id) === String(channel.creator) ? (
               <>
-                <input
+                <textarea
                   type="text"
                   value={message}
                   onChange={handleInputChange}
@@ -676,7 +742,75 @@ useEffect(() => {
                 <p>Only Admin Can Message</p>
               </div>
             )}
-          </footer>
+          </footer> */}
+          {!isAdmin ? (
+            <footer className="p-3 border-t bg-white flex items-end gap-2 shrink-0">
+              <div
+                className={`flex items-end justify-center flex-1 rounded-2xl px-3 py-2 gap-2 shadow-sm transition max-h-[120px] 
+              ${isAdmin ? "bg-gray-100" : "bg-gray-200 cursor-not-allowed"}
+            `}
+              >
+                Only admin can send messages
+              </div>
+            </footer>
+          ) : (
+            <footer className="p-3 border-t bg-white flex items-end gap-2 shrink-0">
+
+              {/* INPUT CONTAINER */}
+              <div
+                className={`flex items-end flex-1 rounded-2xl px-3 py-2 gap-2 shadow-sm transition max-h-[120px] 
+              ${isAdmin ? "bg-gray-100" : "bg-gray-200 cursor-not-allowed"}
+            `}
+              >
+
+                {/* TEXTAREA */}
+                <textarea
+                  ref={textareaRef}
+                  value={message}
+                  onChange={handleInputChange}
+                  disabled={!isAdmin}
+                  rows={1}
+                  placeholder={
+                    isAdmin
+                      ? "Type a message..."
+                      : "Only admin can send messages"
+                  }
+                  className="flex-1 bg-transparent resize-none outline-none text-sm leading-5 max-h-[120px] overflow-y-auto self-end"
+                  style={{ minHeight: "30px", scrollbarWidth: 'none' }}
+                  onKeyDown={(e) => {
+                    if (!isAdmin) return;
+
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                />
+
+                {/* EMOJI ICON */}
+                <i
+                  className={`fa-regular fa-face-smile text-gray-500 ${!isAdmin && "opacity-50"
+                    }`}
+                ></i>
+
+              </div>
+
+              {/* SEND BUTTON */}
+              <button
+                onClick={handleSendMessage}
+                disabled={!isAdmin || !message.trim()}
+                className={`w-10 h-10 flex items-center justify-center rounded-full transition
+      ${isAdmin && message.trim()
+                    ? "bg-blue-500 text-white"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }
+    `}
+              >
+                <i className="fa-solid fa-paper-plane text-sm"></i>
+              </button>
+
+            </footer>
+          )}
         </div>
 
         {/* <AnimatePresence> */}
@@ -843,7 +977,7 @@ useEffect(() => {
                     <div className="mt-auto px-3 py-3">
                       <div className="bg-blue-400 rounded-lg font-semibold text-lg flex items-center justify-between">
                         <p className=" px-3 py-2 ">{d.text}</p>
-                      {isAdmin && (
+                        {isAdmin && (
                           <i
                             onClick={(e) => {
                               e.stopPropagation();
