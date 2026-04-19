@@ -150,7 +150,7 @@ export function CreateChannel({ token }) {
             console.log("Created channel:", data.channel);
 
             setTimeout(() => {
-                navigate("/chats");
+                navigate(`/chats?Id=${data.channel._id}`);
             }, 2500);
 
         } catch (err) {
@@ -159,13 +159,20 @@ export function CreateChannel({ token }) {
     };
     return (
         <AnimatePresence>
+
             <motion.div
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
-                className="h-screen flex items-center justify-center relative overflow-hidden"
+                className="h-screen flex gap-20 flex-col items-center justify-center relative overflow-hidden"
                 style={{ background: Theme.thirdBackgroundColor }}
             >
+
+                <div onClick={() => navigate('/chats', { replace: true })} className=" w-50 flex justify-end items-center ">
+                    <div>
+                        <i className="fa-solid fa-xmark bg-red-500 px-4 py-1.5 rounded text-white cursor-pointer" title="close"></i>
+                    </div>
+                </div>
                 {/* ================= WIPE OVERLAY ================= */}
                 <AnimatePresence>
                     {isWiping && (
@@ -182,44 +189,48 @@ export function CreateChannel({ token }) {
 
                 {/* ================= MAIN CONTENT ================= */}
                 {!created ? (
-                    <div className="flex flex-col items-center gap-4">
-                        {!showForm ? (
-                            <>
-                                {/* INTRO */}
-                                <Lottie style={{ width: 500 }} animationData={People} loop />
+                    <>
 
-                                <h2 className="text-xl font-semibold">
-                                    What is a Channel ?
-                                </h2>
+                        <div className="flex flex-col items-center gap-4">
+                            {!showForm ? (
+                                <>
+                                    {/* INTRO */}
+                                    <div>
+                                        <Lottie style={{ width: 500 }} animationData={People} loop />
+                                    </div>
 
-                                <p className="text-sm text-gray-600 text-center max-w-[400px]">
-                                    Channel are a one-to-many tool for broadcasting your message to unlimited audience
-                                </p>
+                                    <h2 className="text-xl font-semibold">
+                                        What is a Channel ?
+                                    </h2>
 
-                                <motion.button
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={handleCreateStart}
-                                    className="relative overflow-hidden px-8 py-2 rounded-xl text-white font-medium bg-[#26d7a8]"
+                                    <p className="text-sm text-gray-600 text-center max-w-[400px] px-3">
+                                        Channel are a one-to-many tool for broadcasting your message to unlimited audience
+                                    </p>
+
+                                    <motion.button
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={handleCreateStart}
+                                        className="relative overflow-hidden px-8 py-2 rounded-xl text-white font-medium bg-[#26d7a8]"
+                                    >
+                                        Create Channel
+                                        <span className="absolute inset-0">
+                                            <span className="shine"></span>
+                                        </span>
+                                    </motion.button>
+                                </>
+                            ) : (
+                                /* ================= FORM ================= */
+                                <motion.div
+                                    initial={{ opacity: 0, y: 30 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="flex flex-col items-center gap-5 w-[350px]"
                                 >
-                                    Create Channel
-                                    <span className="absolute inset-0">
-                                        <span className="shine"></span>
+                                    <span className="text-lg font-semibold">
+                                        New Channel
                                     </span>
-                                </motion.button>
-                            </>
-                        ) : (
-                            /* ================= FORM ================= */
-                            <motion.div
-                                initial={{ opacity: 0, y: 30 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="flex flex-col items-center gap-5 w-[350px]"
-                            >
-                                <span className="text-lg font-semibold">
-                                    New Channel
-                                </span>
 
-                                {/* IMAGE */}
-                                {/* <label className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center cursor-pointer overflow-hidden">
+                                    {/* IMAGE */}
+                                    {/* <label className="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center cursor-pointer overflow-hidden">
                                     {preview ? (
                                         <img
                                             src={preview}
@@ -236,35 +247,36 @@ export function CreateChannel({ token }) {
                                     />
                                 </label> */}
 
-                                {/* INPUTS */}
-                                <div className="w-full flex flex-col gap-3">
-                                    <input
-                                        type="text"
-                                        placeholder="Channel name"
-                                        value={channelName}
-                                        onChange={(e) => setChannelName(e.target.value)}
-                                        className="px-3 py-2 border rounded-md outline-none focus:border-blue-400"
-                                    />
+                                    {/* INPUTS */}
+                                    <div className="w-full flex flex-col gap-3">
+                                        <input
+                                            type="text"
+                                            placeholder="Channel name"
+                                            value={channelName}
+                                            onChange={(e) => setChannelName(e.target.value)}
+                                            className="px-3 py-2 border rounded-md outline-none focus:border-blue-400"
+                                        />
 
-                                    <input
-                                        type="text"
-                                        placeholder="Description"
-                                        value={description}
-                                        onChange={(e) => setDescription(e.target.value)}
-                                        className="px-3 py-2 border rounded-md outline-none focus:border-blue-400"
-                                    />
-                                </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Description"
+                                            value={description}
+                                            onChange={(e) => setDescription(e.target.value)}
+                                            className="px-3 py-2 border rounded-md outline-none focus:border-blue-400"
+                                        />
+                                    </div>
 
-                                <motion.button
-                                    whileTap={{ scale: 0.97 }}
-                                    onClick={handleSubmit}
-                                    className="w-full bg-[#26d7a8] text-white py-2 rounded-md"
-                                >
-                                    Create Channel
-                                </motion.button>
-                            </motion.div>
-                        )}
-                    </div>
+                                    <motion.button
+                                        whileTap={{ scale: 0.97 }}
+                                        onClick={handleSubmit}
+                                        className="w-full bg-[#26d7a8] text-white py-2 rounded-md"
+                                    >
+                                        Create Channel
+                                    </motion.button>
+                                </motion.div>
+                            )}
+                        </div>
+                    </>
                 ) : (
                     /* ================= CHANNEL VIEW ================= */
                     <motion.div
@@ -361,13 +373,15 @@ export function CreateChannel({ token }) {
                                         }
                                     </div>
                                 </div>
-                                <motion.button
-                                    whileTap={{ scale: 0.95 }}
-                                    onClick={handleAddMembers}
-                                    className="mt-4 w-full bg-blue-500 text-white py-2 rounded-md font-medium"
-                                >
-                                    Add Members
-                                </motion.button>
+                                <div className="-mt-30">
+                                    <motion.button
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={handleAddMembers}
+                                        className=" w-full bg-blue-500 text-white py-2 rounded-md font-medium"
+                                    >
+                                        Add Members
+                                    </motion.button>
+                                </div>
                             </motion.div>
                         </motion.div>
                     </motion.div>

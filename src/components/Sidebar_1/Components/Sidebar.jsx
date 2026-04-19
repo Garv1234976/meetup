@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { Theme } from "../../../theme/globalTheme";
-import { data, Link, useNavigate } from "react-router-dom";
+import { data, Link, replace, useNavigate } from "react-router-dom";
 import { UserContext } from "../../../context/Profile";
 import Modal from "react-modal";
 import { motion, AnimatePresence } from "framer-motion";
@@ -61,7 +61,8 @@ export function Sidebar_One({ token, openInvite, setOpenInvite,onReset  }) {
   const [inviteError, setInviteError] = useState(false);
   const [copyTick, setCopyTick] = useState(false);
   const [showTourPrompt, setShowTourPrompt] = useState(false);
-  
+    const navigate = useNavigate();
+
   const driverObj = driver({
   showProgress: true,
   steps: [
@@ -441,6 +442,23 @@ useEffect(() => {
           </div>
           <div className="flex flex-col gap-3 lg:text-xl text-sm">
             {/* <i className="fa-solid fa-hand-point-up"></i> */}
+              
+            <div 
+            id="AddChannel"
+              // onClick={openInviteModal}
+              onClick={() => {
+                navigate('/channel')
+              }}
+              
+              className="flex flex-col items-center py-2 rounded-md cursor-pointer
+                          bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200"
+              title="Add Channel"
+            >
+              <i className="fa-solid fa-square-rss text-2xl"></i>
+              <span className="text-[10px] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                Channel
+              </span>
+            </div>
             <div 
             id="Home"
               // onClick={openInviteModal}
@@ -1010,7 +1028,7 @@ useEffect(() => {
           </button>
         </div>
 
-         <div className="flex items-baseline gap-2 justify-between">
+         {/* <div className="flex items-baseline gap-2 justify-between">
           <p className="text-xs text-gray-500">
             Learn How to Broadcast your  message.
           </p>
@@ -1032,16 +1050,16 @@ useEffect(() => {
           >
             Start
           </button>
-        </div>
+        </div> */}
         
 
        </div>
-      <div className="flex items-center justify-between px-2 font-semibold text-xs">
+      {/* <div className="flex items-center justify-between px-2 font-semibold text-xs">
           <span>
           Complete
         </span>
         <span>1/3</span>
-      </div>
+      </div> */}
       </div>
     
     </motion.div>

@@ -12,6 +12,7 @@ import { formatDateHeader } from "../../../../utils/DateFormater";
 import { useTyping } from "../../../context/TypingContext";
 import { useSocket } from "../../../context/SocketContext";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 const htmlToText = (html) => {
   return html
@@ -81,7 +82,7 @@ export function Messaging({ slectedFriends, onBack }) {
   const messagesEndRef = useRef(null);
   const prevMsgCountRef = useRef(0);
   const [showRemoveModal, setShowRemoveModal] = useState(false);
-
+  const navigate = useNavigate();
   // Fetch messages on chat change
   useEffect(() => {
     if (!slectedFriends?.chatId) return;
@@ -314,13 +315,15 @@ export function Messaging({ slectedFriends, onBack }) {
   return (
     <>
       <div
-        className="max-md:hidden w-[65%] h-screen flex flex-col relative"
+        className="w-[100%] h-screen flex flex-col relative"
         style={{ backgroundColor: Theme.primaryBackgroundColor }}
       >
         {/* Header */}
         <header className="sticky top-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center gap-3 z-10 border-b border-gray-100 dark:border-gray-700">
           <i
-            onClick={onBack}
+            onClick={() => {onBack();
+              navigate("/chats", { replace: true });
+            }}
             className="fa-solid fa-arrow-left text-xl text-white cursor-pointer"
           ></i>
 
@@ -613,7 +616,7 @@ export function Messaging({ slectedFriends, onBack }) {
               type="submit"
               className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-full text-white font-medium text-sm transition-colors"
             >
-              Send <i className="fa-solid fa-paper-plane text-xs"></i>
+              <span className="hidden md:block">Send</span> <i className="fa-solid fa-paper-plane text-xs"></i>
             </button>
           </form>
         </footer>

@@ -1,91 +1,257 @@
+import { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContex";
+import { motion, AnimatePresence } from "framer-motion";
 
 const UserProfile = () => {
   const { user, setUser } = useAuth();
 
-  const clearAllCookies = () => {
-    document.cookie.split(";").forEach((cookie) => {
-      const name = cookie.split("=")[0].trim();
-      document.cookie =
-        name +
-        "=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/;";
-    });
+  const [isEditing, setIsEditing] = useState(false);
+  const [error, setError] = useState("");
+
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    phoneNumber: "",
+  });
+
+  useEffect(() => {
+    if (user) {
+      setForm({
+        name: user.name || "",
+        email: user.email || "",
+        password: "",
+        phoneNumber: user.phoneNumber || "",
+      });
+    }
+  }, [user]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+
+    if (name === "phoneNumber") {
+      const onlyNums = value.replace(/\D/g, "");
+      if (onlyNums.length > 10) {
+        setError("Phone must be 10 digits");
+        return;
+      }
+      setError("");
+      setForm((prev) => ({ ...prev, phoneNumber: onlyNums }));
+      return;
+    }
+
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleSave = async () => {
+    if (form.phoneNumber && form.phoneNumber.length !== 10) {
+      setError("Phone must be 10 digits");
+      return;
+    }
 
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/api/user`,
+        {
+          method: "PUT",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: form.name,
+            email: form.email,
+            password: form.password || undefined,
+            phoneNumber: form.phoneNumber || null,
+          }),
+        }
+      );
 
+      const data = await res.json();
 
-const handleLogout = async () => {
-  try {
-    await fetch(`${import.meta.env.VITE_BACK_DEV_API}/api/logout`, {
-      method: "POST",
-      credentials: "include", 
-    });
-  } catch (err) {
-    console.log("Logout error", err);
-  }
+      if (!res.ok) {
+        setError(data.message || "Update failed");
+        return;
+      }
 
-  localStorage.clear();
-  sessionStorage.clear();
-  setUser(null);
+      setUser((prev) => ({
+        ...prev,
+        ...data.user,
+      }));
 
-  window.location.href = "/";
-};
+      setIsEditing(false);
+    } catch {
+      setError("Update failed");
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch(`${import.meta.env.VITE_BACK_DEV_API}/api/logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+    } catch {}
+
+    localStorage.clear();
+    sessionStorage.clear();
+    setUser(null);
+    window.location.href = "/";
+  };
+
   if (!user) {
-    return <div className="p-4 text-left">No user data</div>;
+    return <div className="p-4">No user data</div>;
   }
 
   return (
-    <div className="w-full h-full bg-white p-6 rounded-md">
-      
-      {/* HEADER */}
-      <div className="flex items-center gap-4 border-b pb-4">
-        <img
-          src={user.picture}
-          alt="profile"
-          className="w-16 h-16 rounded-full border object-cover"
-        />
+    <div className="w-full h-full bg-white p-4 sm:p-6 rounded-md flex flex-col gap-6">
 
-        <div className="flex flex-col">
-          <h2 className="text-lg font-semibold">{user.name}</h2>
-          <p className="text-sm text-gray-500">{user.email}</p>
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border-b pb-4">
+
+        <div className="flex items-center gap-4">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-blue-500 flex items-center justify-center text-white text-lg sm:text-xl font-bold">
+            {user.name?.charAt(0)?.toUpperCase()}
+          </div>
+
+          <div className="break-all">
+            <h2 className="text-base sm:text-lg font-semibold">{user.name}</h2>
+            <p className="text-xs sm:text-sm text-gray-500">{user.email}</p>
+          </div>
+        </div>
+
+        {/* ACTION BUTTONS */}
+        <div className="flex gap-2 flex-wrap">
+
+          {!isEditing ? (
+            <div
+              onClick={() => setIsEditing(true)}
+              className="flex items-center gap-2 cursor-pointer bg-blue-500 px-3 py-1.5 rounded-md text-white text-sm"
+            >
+              Edit
+              <i className="fa-solid fa-pen"></i>
+            </div>
+          ) : (
+            <>
+              <div
+                onClick={handleSave}
+                className="flex items-center gap-2 bg-green-500 px-3 py-1.5 rounded-md text-white text-sm cursor-pointer"
+              >
+                Save
+                <i className="fa-solid fa-check"></i>
+              </div>
+
+              <div
+                onClick={() => setIsEditing(false)}
+                className="flex items-center gap-2 bg-red-500 px-3 py-1.5 rounded-md text-white text-sm cursor-pointer"
+              >
+                Cancel
+                <i className="fa-solid fa-xmark"></i>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
-      {/* PROFILE LIST */}
-      <ul className="mt-6 flex flex-col gap-3 max-w-xl">
+      {/* ERROR */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="text-red-500 text-sm"
+          >
+            {error}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* <li className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg">
-          <i className="fa-solid fa-user text-gray-600"></i>
-          <span className="text-sm break-all">ID: {user._id}</span>
-        </li> */}
+      {/* FORM */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex flex-col gap-4 w-full"
+      >
 
-        <li className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg">
-          <i className="fa-solid fa-envelope text-gray-600"></i>
-          <span className="text-sm">{user.email}</span>
-        </li>
+        {/* NAME */}
+        {isEditing ? (
+          <input
+            name="name"
+            value={form.name}
+            onChange={handleChange}
+            className="border p-2 rounded w-full"
+            placeholder="Name"
+          />
+        ) : (
+          <div className="bg-gray-100 p-3 rounded text-sm sm:text-base">
+            Name: {user.name}
+          </div>
+        )}
 
-        <li className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg">
-          <i className="fa-solid fa-phone text-gray-600"></i>
-          <span className="text-sm">Invite: {user.inviteNumber}</span>
-        </li>
+        {/* EMAIL */}
+        {isEditing ? (
+          <input
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            className="border p-2 rounded w-full"
+            placeholder="Email"
+          />
+        ) : (
+          <div className="bg-gray-100 p-3 rounded text-sm sm:text-base">
+            Email: {user.email}
+          </div>
+        )}
 
-        <li className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg">
-          <i className="fa-solid fa-user-group text-gray-600"></i>
-          <span className="text-sm">
-            Friend Requests: {user.requestCount}
-          </span>
-        </li>
+        {/* PHONE */}
+        {isEditing ? (
+          <input
+            name="phoneNumber"
+            value={form.phoneNumber}
+            onChange={handleChange}
+            className="border p-2 rounded w-full"
+            placeholder="Phone (10 digit)"
+          />
+        ) : (
+          <div className="bg-gray-100 p-3 rounded text-sm sm:text-base">
+            Phone: {user.phoneNumber || "Not added"}
+          </div>
+        )}
 
-        {/* LOGOUT */}
-        <li
-          onClick={handleLogout}
-          className="flex items-center gap-2 p-3 bg-red-500 hover:bg-red-600 text-white rounded-xl cursor-pointer transition w-fit"
-        >
-          <i className="fa-solid fa-right-from-bracket"></i>
-          Logout
-        </li>
-      </ul>
+        {/* STATUS */}
+        {!isEditing && (
+          <div className="bg-gray-100 p-3 rounded text-sm sm:text-base">
+            Status:{" "}
+            {user.isVerify ? (
+              <span className="text-green-600 font-semibold">Verified</span>
+            ) : (
+              <span className="text-yellow-600 font-semibold">
+                Not verified
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* PASSWORD */}
+        {isEditing && (
+          <input
+            type="password"
+            name="password"
+            value={form.password}
+            onChange={handleChange}
+            className="border p-2 rounded w-full"
+            placeholder="New Password (optional)"
+          />
+        )}
+      </motion.div>
+
+      {/* LOGOUT */}
+      <div
+        onClick={handleLogout}
+        className="flex items-center justify-center gap-2 p-3 bg-red-500 hover:bg-red-600 text-white rounded-xl cursor-pointer w-full sm:w-fit"
+      >
+        <i className="fa-solid fa-right-from-bracket"></i>
+        Logout
+      </div>
     </div>
   );
 };

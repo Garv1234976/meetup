@@ -5,22 +5,31 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   // ✅ Load cached user (fast UI)
   const [user, setUserState] = useState(() => {
-    const cached = sessionStorage.getItem('user');
-    return cached ? JSON.parse(cached) : null;
-  });
+  try {
+    const cached = sessionStorage.getItem("user");
+
+    if (!cached || cached === "undefined") return null;
+
+    return JSON.parse(cached);
+  } catch (err) {
+    console.log("Invalid cache, clearing...");
+    sessionStorage.removeItem("user");
+    return null;
+  }
+});
 
   // 🔥 ALWAYS start loading true
   const [loading, setLoading] = useState(true);
 
   // ✅ setter with cache sync
   const setUser = (userData) => {
-    if (userData) {
-      sessionStorage.setItem('user', JSON.stringify(userData));
-    } else {
-      sessionStorage.removeItem('user');
-    }
-    setUserState(userData);
-  };
+  if (userData && typeof userData === "object") {
+    sessionStorage.setItem("user", JSON.stringify(userData));
+  } else {
+    sessionStorage.removeItem("user");
+  }
+  setUserState(userData || null);
+};
 
   // 🔥 Auth check (VERY IMPORTANT)
   useEffect(() => {

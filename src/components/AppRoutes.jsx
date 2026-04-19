@@ -8,6 +8,7 @@ import GroupChat from "./Group";
 import { CreateChannel } from "./CreateChannel/CreateChannel";
 import { VideoCall } from "./VideoCall/VideoCall";
 import { RoomJoin } from "./VideoCall/RoomJoin";
+import BroadcastChannelCreator from "./Broadcast/BroadcastChannelCreator";
 
 export default function AppRoutes({ clientId }) {
   return (
@@ -42,6 +43,14 @@ export default function AppRoutes({ clientId }) {
         element={
           <ProtectedRoute>
             <CreateChannel/>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/broadcast"
+        element={
+          <ProtectedRoute>
+            <BroadcastChannelCreator/>
           </ProtectedRoute>
         }
       />

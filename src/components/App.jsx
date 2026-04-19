@@ -18,7 +18,7 @@ export default function MainApp() {
       {/* <SocketProvider> */}
         <TypingProvider>
           <UserProvider>
-            <div className="flex">
+            <div className="flex w-full h-screen overflow-hidden">
               <Sidebar_One
               openInvite={openInvite} 
               setOpenInvite={setOpenInvite}

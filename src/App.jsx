@@ -162,8 +162,8 @@ if (user && !startAnim) {
                         />
                       </GoogleOAuthProvider>
                     </div>
-                    <span>or</span>
-                    <form className=" flex flex-col items-center gap-2" >
+                    {/* <span>or</span> */}
+                    {/* <form className=" flex flex-col items-center gap-2" >
                       <label htmlFor="username" className="text-lg">
                         <input
                           name="username"
@@ -173,7 +173,7 @@ if (user && !startAnim) {
                           autoComplete="username"
                         />
                       </label>
-                      {/* <label htmlFor="password" className="text-lg">
+                       <label htmlFor="password" className="text-lg">
                         <input
                           name="password"
                           type="password"
@@ -181,14 +181,14 @@ if (user && !startAnim) {
                           className="border rounded p-1 text-center"
                           autoComplete="current-password"
                         />
-                      </label> */}
+                      </label> 
                       <div
                         onClick={handleClick}
                         className="bg-blue-300 w-full p-1 rounded-md text-center text-white font-semibold cursor-pointer"
                       >
                         Login
                       </div>
-                    </form>
+                    </form> */}
                     {/* TODO: adding the signup page */}
                     {/* <span className="flex gap-1">
                       Not created an account?

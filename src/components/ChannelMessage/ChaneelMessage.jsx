@@ -9,9 +9,9 @@ import { useNavigate } from "react-router-dom";
 export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const { user } = useAuth();
   const channel = fullchannelobject;
-  console.log({ channel });
+  const BroadCastChannel = channel.isBroadcast
 
-  const { socket, isReady, channelMessages, channelPinned, setActiveChannel, channelUnread, setChannelUnread, channelOnline, setChannelMessages,setChannelPinned } = useSocket();
+  const { socket, isReady, channelMessages, channelPinned, setActiveChannel, channelUnread, setChannelUnread, channelOnline, setChannelMessages, setChannelPinned } = useSocket();
 
 
   const [showMenu, setShowMenu] = useState(false);
@@ -48,7 +48,8 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const seenMessagesRef = useRef(new Set());
   const isAdmin = String(user._id) === String(channel.creator);
   const textareaRef = useRef(null);
-
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   useEffect(() => {
     setActiveChannel(channelid);
 
@@ -219,40 +220,40 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
 
 
   useEffect(() => {
-  const loadChannel = async () => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_BACK_DEV_API}/channels/${channelid}`,
-        {
-          credentials: "include",
-        }
-      );
+    const loadChannel = async () => {
+      try {
+        const res = await fetch(
+          `${import.meta.env.VITE_BACK_DEV_API}/channels/${channelid}`,
+          {
+            credentials: "include",
+          }
+        );
 
-      const data = await res.json();
+        const data = await res.json();
 
-      if (!res.ok) return;
+        if (!res.ok) return;
 
-      //  LOAD MESSAGES
-      setChannelMessages((prev) => ({
-        ...prev,
-        [channelid]: data.messages || [],
-      }));
+        //  LOAD MESSAGES
+        setChannelMessages((prev) => ({
+          ...prev,
+          [channelid]: data.messages || [],
+        }));
 
-      // ✅ LOAD PINNED
-      setChannelPinned((prev) => ({
-        ...prev,
-        [channelid]: data.pinnedMessages || [],
-      }));
+        // ✅ LOAD PINNED
+        setChannelPinned((prev) => ({
+          ...prev,
+          [channelid]: data.pinnedMessages || [],
+        }));
 
-    } catch (err) {
-      console.log("Hydration failed");
+      } catch (err) {
+        console.log("Hydration failed");
+      }
+    };
+
+    if (channelid) {
+      loadChannel();
     }
-  };
-
-  if (channelid) {
-    loadChannel();
-  }
-}, [channelid]);
+  }, [channelid]);
 
 
   useEffect(() => {
@@ -280,18 +281,57 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
     });
   };
 
+  const handleLeaveChannel = async () => {
+    try {
+      setIsDeleting(true); // 🔥 start loader
+
+      await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/channels/${channelid}/leave`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
+
+      // 🔥 CLEAR LOCAL STATE (VERY IMPORTANT)
+      setChannelMessages((prev) => {
+        const updated = { ...prev };
+        delete updated[channelid];
+        return updated;
+      });
+
+      setChannelPinned((prev) => {
+        const updated = { ...prev };
+        delete updated[channelid];
+        return updated;
+      });
+
+    } catch (err) {
+      console.log("Leave failed");
+      setIsDeleting(false);
+    } finally {
+      setTimeout(() => {
+        window.location.href = "/chats";
+      }, 300);
+
+    }
+  };
+
   return (
     <>
       <AnimatePresence>
         <div
-          className="max-md:hidden w-[65%] h-screen flex flex-col overflow-hidden"
+          className="w-[100%] h-screen flex flex-col overflow-hidden"
           style={{ backgroundColor: Theme.primaryBackgroundColor }}
         >
           {/*  HEADER (same as chat) */}
           <header className="sticky top-0 bg-white shadow-sm px-3 pt-3 flex items-center gap-3 ">
 
             <i
-              onClick={onBack}
+              onClick={() => {
+                onBack();
+                navigate("/chats", { replace: true });
+              }}
               className="fa-solid fa-arrow-left text-xl cursor-pointer"
             ></i>
             <div className="flex justify-between w-full pb-1 items-center">
@@ -307,17 +347,22 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                     <span className="font-semibold text-gray-800">
                       {channel?.name}
                     </span>
-                    {channelOnline && (
-                      <p className="text-sm text-green-800 font-semibold px-2 rounded-md bg-green-300" >
-                        {channelOnline[channelid] || 0} online
-                      </p>
+                    {BroadCastChannel === true ? "" : (
+                      channelOnline && (
+                        <p className="max-sm:hidden text-sm text-green-800 font-semibold px-2 rounded-md bg-green-300" >
+                          {channelOnline[channelid] || 0} online
+                        </p>
+                      )
                     )}
                   </div>
 
-                  <span className="text-xs text-gray-500">
-                    {channel?.totalSubscribers} subscribers
-                  </span>
-
+                  {BroadCastChannel === true ? (
+                    channel?.totalSubscribers + "  Recipients"
+                  ) : (
+                    <span className="text-sm text-gray-500">
+                      {channel?.totalSubscribers} subscribers
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -330,16 +375,31 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                   </div>
                 </a>
               )} */}
+              {BroadCastChannel === true ? "" : (
+                <div
+                  onClick={() => {
+                    const link = `${import.meta.env.VITE_BACK_DEV_API}/join/${channel.inviteCode}`;
+                    navigator.clipboard.writeText(link);
+                    alert("Invite link copied!");
+                  }}
+                  className="hidden md:flex gap-10 items-center cursor-pointer hover:bg-blue-100 py-1 px-2 rounded-md"
+                >
+                  {/* <i className="fa-solid fa-link"></i> */}
+                  <span>Share Invite Link</span>
+                </div>
+              )}
               <div
                 onClick={() => {
                   const link = `${import.meta.env.VITE_BACK_DEV_API}/join/${channel.inviteCode}`;
-                  navigator.clipboard.writeText(link);
-                  alert("Invite link copied!");
+
+                  const message = `Join my channel 🚀\n${link}`;
+
+                  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+
+                  window.open(whatsappUrl, "_blank");
                 }}
-                className="flex gap-10 items-center cursor-pointer hover:bg-blue-100 py-1 px-2 rounded-md"
               >
-                {/* <i className="fa-solid fa-link"></i> */}
-                <span>Share Invite Link</span>
+                <i class="sm:hidden fa-solid fa-share-nodes"></i>
               </div>
               <div className="flex items-center gap-4">
                 <i className="fa-solid fa-magnifying-glass text-lg text-blue-400 hover:text-black cursor-pointer h-10 pt-3 "></i>
@@ -471,7 +531,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
               ref={containerRef}
               id="chat-container"
               className="w-full h-full flex flex-col gap-1 overflow-y-auto scroll-smooth" style={{ scrollbarWidth: 'none' }} >
-              <div className="flex flex-col mt-auto  gap-2 pb-5 pt-15">
+              <div className={`flex ${BroadCastChannel === true ? "" : ""} flex-col mt-auto  gap-2 pb-5 pt-15`}>
                 <div className="absolute top-0 right-[50%] ">
                   {/* <span className="bg-gray-500 font-semibold text-sm px-2 rounded-md text-white">
                     April 6, 2026
@@ -503,24 +563,29 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                     {/* 💬 MESSAGE */}
                     <div className="relative bg-blue-400 px-3 py-2 rounded-2xl flex flex-col max-w-[75%]">
 
-                      {String(user._id) === String(channel.creator) ? (
-                        <div className="absolute top-1 -right-4" title="Pin">
-                          <i
-                            onClick={() => {
-                              socket.emit("pin_channel_message", {
-                                channelId: channelid,
-                                messageId: msg._id,
-                              });
-                            }}
-                            className="fa-solid fa-thumbtack cursor-pointer text-sm text-gray-700 hover:scale-110"
-                          ></i>
-                        </div>
-                      ) : ''}
+                      {BroadCastChannel === true ?
+                        "" : String(user._id) === String(channel.creator) ? (
+                          <div className="absolute top-1 -right-4" title="Pin">
+                            <i
+                              onClick={() => {
+                                socket.emit("pin_channel_message", {
+                                  channelId: channelid,
+                                  messageId: msg._id,
+                                });
+                              }}
+                              className="fa-solid fa-thumbtack cursor-pointer text-sm text-gray-700 hover:scale-110"
+                            ></i>
+                          </div>
+                        ) : ''
+                      }
+
 
                       {/* CHANNEL NAME */}
-                      <span className="font-semibold text-sm text-amber-900">
-                        {channel?.name}
-                      </span>
+                      {BroadCastChannel === true ? "" : (
+                        <span className="font-semibold text-sm text-amber-900">
+                          {channel?.name}
+                        </span>
+                      )}
 
                       {/* LINK */}
                       {msg.preview?.url && (
@@ -588,7 +653,8 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                                     whileTap={{ scale: 1.3 }}
                                     className="bg-white px-2 py-[2px] rounded-full text-xs shadow flex items-center gap-1"
                                   >
-                                    {emoji}  {count}
+                                    {/* {emoji}  {count} */}
+                                    {emoji}
                                   </motion.span>
                                 ))}
                             </motion.div>
@@ -597,12 +663,17 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
 
 
                         {/* FOOTER */}
-                        <div className="flex justify-end text-xs text-gray-200 mt-1 gap-2">
-                          <span className="text-xs text-white">
-                            <i className="fa-solid fa-eye"></i> {msg.seenCount || 0}
-                          </span>
-                          {msg.time}
-                        </div>
+
+                        {BroadCastChannel === true ? (
+                          msg.seenCount > 1 ? <i className="fa-solid fa-check-double text-green-200"></i> : <i className="fa-solid fa-check-double"></i>
+                        ) : (
+                          <div className="flex justify-end text-xs text-gray-200 mt-1 gap-2">
+                            <span className="text-xs text-white">
+                              <i className="fa-solid fa-eye"></i> {msg.seenCount || 0}
+                            </span>
+                            {msg.time}
+                          </div>
+                        )}
                       </div>
 
                       {/* MESSAGE TAIL */}
@@ -634,17 +705,19 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                       )}
                       {/*  RIGHT SIDE BUTTON */}
 
-                      <div
-                        onClick={() =>
-                          setReactionMenuOpenIndex(
-                            reactionMenuOpenIndex === index ? null : index
-                          )
-                        }
-                        className="bg-white px-1 py-1 rounded-full shadow cursor-pointer  flex items-center gap-1"
-                      >
-                        <i className="text-sm fa-regular fa-face-grin"></i>
-                        <i className="fa-solid fa-chevron-down text-xs"></i>
-                      </div>
+                      {BroadCastChannel === true ? "" : (
+                        <div
+                          onClick={() =>
+                            setReactionMenuOpenIndex(
+                              reactionMenuOpenIndex === index ? null : index
+                            )
+                          }
+                          className="bg-white px-1 py-1 rounded-full shadow cursor-pointer  flex items-center gap-1"
+                        >
+                          <i className="text-sm fa-regular fa-face-grin"></i>
+                          <i className="fa-solid fa-chevron-down text-xs"></i>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 ))}
@@ -848,17 +921,40 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
             >
               <div className="flex flex-col text-sm text-gray-700">
 
-                <button className="px-4 py-3 hover:bg-gray-100 text-left">
+                {/* <button className="px-4 py-3 hover:bg-gray-100 text-left">
                   View Channel Info
                 </button>
 
                 <button className="px-4 py-3 hover:bg-gray-100 text-left">
                   Mute Notifications
-                </button>
+                </button> */}
 
-                <button className="px-4 py-3 hover:bg-gray-100 text-left text-red-500">
+                {/* <button className="px-4 py-3 hover:bg-gray-100 text-left text-red-500">
                   Leave Channel
-                </button>
+                </button> */}
+                {BroadCastChannel === true ? (
+                  <div
+                    onClick={() => setShowDeleteModal(true)}
+                    className="px-4 py-3 hover:bg-gray-100 text-left text-red-500 cursor-pointer"
+                  >
+                    Delete Broadcast
+                  </div>
+                ) : isAdmin ? (
+                  <div
+                    onClick={() => setShowDeleteModal(true)}
+                    className="px-4 py-3 hover:bg-gray-100 text-left text-red-500 cursor-pointer"
+                  >
+                    Delete Channel
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => setShowDeleteModal(true)}
+                    className="px-4 py-3 hover:bg-gray-100 text-left text-red-500 cursor-pointer"
+                  >
+                    Leave Channel
+                  </div>
+                )}
+
 
               </div>
             </motion.div>
@@ -1000,6 +1096,59 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
               </motion.div>
             </motion.div>
           </>
+        )}
+        {showDeleteModal && (
+          <motion.div
+            className="fixed inset-0 bg-black/40 flex justify-center items-center z-[999]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              initial={{ scale: 0.8, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.8, y: 30 }}
+              className="bg-white rounded-xl p-5 w-[300px] flex flex-col gap-4 shadow-xl"
+            >
+
+              {/* TITLE */}
+              <h2 className="font-semibold text-lg text-center">
+                {BroadCastChannel
+                  ? "Delete Broadcast?"
+                  : isAdmin
+                    ? "Delete Channel?"
+                    : "Leave Channel?"}
+              </h2>
+
+              {/* MESSAGE */}
+              <p className="text-sm text-gray-500 text-center">
+                {isAdmin || BroadCastChannel
+                  ? "This action cannot be undone."
+                  : "You can join again later."}
+              </p>
+
+              {/* ACTIONS */}
+              <div className="flex gap-3 mt-2">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 py-2 rounded-md bg-gray-200"
+                >
+                  No
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleLeaveChannel();
+                    setShowDeleteModal(false);
+                  }}
+                  className="flex-1 py-2 rounded-md bg-red-500 text-white"
+                >
+                  Yes
+                </button>
+              </div>
+
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
