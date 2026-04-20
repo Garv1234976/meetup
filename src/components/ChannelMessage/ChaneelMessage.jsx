@@ -6,9 +6,70 @@ import { useSocket } from "../../context/SocketContext";
 import { useRef } from "react";
 import { useAuth } from "../../context/AuthContex";
 import { useNavigate } from "react-router-dom";
+
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
+
+const formatIndianTime = (isoTime) => {
+  if (!isoTime) return "";
+
+  const date = new Date(isoTime);
+
+  if (isNaN(date)) return ""; // prevent crash
+
+  return date.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+const formatSize = (bytes) => {
+  if (!bytes) return "";
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+};
+
+const handleDownload = async (url, fileName = "file") => {
+  try {
+    const res = await fetch(url);
+
+    const blob = await res.blob();
+
+    const blobUrl = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+
+    a.remove();
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (err) {
+    console.log("Download failed", err);
+  }
+};
+const MembersSkeleton = () => (
+  <div className="flex flex-col gap-3 mt-2">
+    {[...Array(5)].map((_, i) => (
+      <div key={i} className="flex items-center gap-3 animate-pulse">
+        <div className="w-10 h-10 rounded-full bg-gray-300" />
+        <div className="h-3 w-24 bg-gray-300 rounded" />
+      </div>
+    ))}
+  </div>
+);
 export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const { user } = useAuth();
   const channel = fullchannelobject;
+  console.log(channel);
+
   const BroadCastChannel = channel.isBroadcast
 
   const { socket, isReady, channelMessages, channelPinned, setActiveChannel, channelUnread, setChannelUnread, channelOnline, setChannelMessages, setChannelPinned } = useSocket();
@@ -46,10 +107,30 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const containerRef = useRef();
   const navigate = useNavigate();
   const seenMessagesRef = useRef(new Set());
-  const isAdmin = String(user._id) === String(channel.creator);
+  const [channelState, setChannelState] = useState({
+    creator: null,
+    admins: [],
+  });
+  const isAdmin =
+    channelState.creator === user._id ||
+    channelState.admins.includes(user._id);
+  console.log(isAdmin);
   const textareaRef = useRef(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioBlob, setAudioBlob] = useState(null);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [creatorBio, setCreatorBio] = useState(null);
+  const [loadingMembers, setLoadingMembers] = useState(true);
+  const mediaRecorderRef = useRef(null);
+  const [activeUser, setActiveUser] = useState(null);
+  const [showRecorderUI, setShowRecorderUI] = useState(false);
+  const [showAudioModal, setShowAudioModal] = useState(false);
+  const chunksRef = useRef([]);
+  const startTimeRef = useRef(0);
   useEffect(() => {
     setActiveChannel(channelid);
 
@@ -219,6 +300,8 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
 
 
 
+
+
   useEffect(() => {
     const loadChannel = async () => {
       try {
@@ -233,17 +316,23 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
 
         if (!res.ok) return;
 
-        //  LOAD MESSAGES
+        // ✅ messages
         setChannelMessages((prev) => ({
           ...prev,
           [channelid]: data.messages || [],
         }));
 
-        // ✅ LOAD PINNED
+        // ✅ pinned
         setChannelPinned((prev) => ({
           ...prev,
           [channelid]: data.pinnedMessages || [],
         }));
+
+        // 🔥 THIS IS THE KEY (YOU MISSED THIS)
+        setChannelState({
+          creator: data.creator,
+          admins: data.admins || [],
+        });
 
       } catch (err) {
         console.log("Hydration failed");
@@ -254,6 +343,34 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
       loadChannel();
     }
   }, [channelid]);
+
+
+  const loadMembers = async () => {
+    try {
+
+      const res = await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/channels/${channelid}/subscribers`,
+        {
+          credentials: "include",
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) return;
+      setLoadingMembers(true);
+      setCreatorBio(data.creator);
+      setMembers(data.subscribers);
+
+      setLoadingMembers(false);
+      console.log(data.subscribers);
+
+    } catch (error) {
+      console.log("Hydration failed");
+    }
+  }
+
+
 
 
   useEffect(() => {
@@ -316,6 +433,271 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
 
     }
   };
+
+
+  const uploadFile = async (file, onProgress = () => { }) => {
+    let progress = 0;
+
+    // fake smooth progress (UX trick)
+    const interval = setInterval(() => {
+      progress += Math.random() * 15;
+
+      if (progress >= 90) progress = 90; // stop at 90 until done
+
+      onProgress(Math.floor(progress));
+    }, 200);
+
+    const fileName = `${Date.now()}-${file.name}`;
+
+    const { data, error } = await supabase.storage
+      .from("chat-files")
+      .upload(fileName, file);
+
+    clearInterval(interval);
+
+    if (error) {
+      console.log(error);
+      return null;
+    }
+
+    // 🔥 finish animation smoothly
+    onProgress(100);
+
+    const { data: publicUrl } = supabase.storage
+      .from("chat-files")
+      .getPublicUrl(fileName);
+
+    return publicUrl.publicUrl;
+  };
+  const handleFileSend = async (file) => {
+    // 🔥 STEP 1 — create temp message
+    const tempId = Date.now();
+
+    const tempMessage = {
+      _id: tempId,
+      text: "",
+      file: null,
+      uploading: true,
+      progress: 0,
+      fileName: file.name,
+      fileSize: file.size,
+      createdAt: new Date(),
+    };
+
+    // 🔥 STEP 2 — show it in UI immediately
+    setChannelMessages((prev) => ({
+      ...prev,
+      [channelid]: [...(prev[channelid] || []), tempMessage],
+    }));
+
+    // 🔥 STEP 3 — upload file
+    const url = await uploadFile(file, (progress) => {
+      setChannelMessages((prev) => ({
+        ...prev,
+        [channelid]: prev[channelid].map((msg) =>
+          msg._id === tempId ? { ...msg, progress } : msg
+        ),
+      }));
+    });
+
+    if (!url) return;
+
+    // 🔥 STEP 4 — send to socket
+    socket.emit("send_channel_message", {
+      channelId: channelid,
+      file: url,
+      fileType: file.type,
+      fileSize: file.size,
+    });
+
+    // 🔥 STEP 5 — remove temp message
+    setChannelMessages((prev) => ({
+      ...prev,
+      [channelid]: prev[channelid].filter((m) => m._id !== tempId),
+    }));
+  };
+
+
+
+  const startRecording = async () => {
+    setShowRecorderUI(true); // 🔥 important
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    const mediaRecorder = new MediaRecorder(stream);
+    mediaRecorderRef.current = mediaRecorder;
+
+    chunksRef.current = [];
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) {
+        chunksRef.current.push(e.data);
+      }
+    };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(chunksRef.current, {
+        type: "audio/webm",
+      });
+
+      if (blob.size < 1000) return;
+
+      setAudioBlob(blob);
+      setAudioUrl(URL.createObjectURL(blob));
+    };
+
+    mediaRecorder.start(100);
+    setIsRecording(true);
+  };
+  const stopRecording = () => {
+    const recorder = mediaRecorderRef.current;
+
+    if (!recorder) return;
+
+    recorder.stop();
+
+    // 🔥 THIS IS IMPORTANT
+    recorder.stream.getTracks().forEach((track) => track.stop());
+
+    setIsRecording(false);
+  };
+
+  const cancelAudio = () => {
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+
+    setAudioBlob(null);
+    setAudioUrl(null);
+    setShowAudioModal(false); // 🔥 bring back input
+  };
+
+
+  const sendAudio = async () => {
+    if (!audioBlob) return;
+
+    const file = new File([audioBlob], "voice.webm", {
+      type: "audio/webm",
+    });
+
+    const tempId = Date.now();
+
+    const tempMessage = {
+      _id: tempId,
+      file: null,
+      uploading: true,
+      progress: 0,
+      fileName: "voice.webm",
+      fileSize: file.size,
+      createdAt: new Date(),
+    };
+
+    // ✅ show instantly
+    setChannelMessages((prev) => ({
+      ...prev,
+      [channelid]: [...(prev[channelid] || []), tempMessage],
+    }));
+
+    // ✅ upload with progress
+    const url = await uploadFile(file, (progress) => {
+      setChannelMessages((prev) => ({
+        ...prev,
+        [channelid]: prev[channelid].map((msg) =>
+          msg._id === tempId ? { ...msg, progress } : msg
+        ),
+      }));
+    });
+
+    if (!url) return;
+
+    // ✅ send to backend
+    socket.emit("send_channel_message", {
+      channelId: channelid,
+      file: url,
+      fileType: "audio/webm",
+      fileSize: file.size,
+      fileName: "voice.webm",
+    });
+
+    // ✅ remove temp
+    setChannelMessages((prev) => ({
+      ...prev,
+      [channelid]: prev[channelid].filter((m) => m._id !== tempId),
+    }));
+
+    setAudioBlob(null);
+    setAudioUrl(null);
+    setShowAudioModal(false);
+  };
+
+
+  const makeAdmin = async (userId) => {
+    try {
+      await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/channels/${channelid}/add-admin/${userId}`,
+        {
+          method: "PUT",
+          credentials: "include",
+        }
+      );
+
+      loadMembers();
+      await refreshChannel(); // 🔥 refresh instantly
+    } catch (err) {
+      console.log("make admin failed");
+    }
+  };
+
+  const removeUser = async (userId) => {
+    try {
+      await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/channels/${channelid}/remove-admin/${userId}`,
+        {
+          method: "PUT",
+          credentials: "include",
+        }
+      );
+
+      loadMembers(); // 🔥 refresh instantly
+    } catch (err) {
+      console.log("remove failed");
+    }
+  };
+
+
+
+  const refreshChannel = async () => {
+    const res = await fetch(
+      `${import.meta.env.VITE_BACK_DEV_API}/channels/${channelid}`,
+      { credentials: "include" }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) return;
+
+    // ✅ messages
+    setChannelMessages((prev) => ({
+      ...prev,
+      [channelid]: data.messages || [],
+    }));
+
+    // ✅ pinned
+    setChannelPinned((prev) => ({
+      ...prev,
+      [channelid]: data.pinnedMessages || [],
+    }));
+
+    // 🔥 THIS IS THE REAL FIX
+    setChannelState((prev) => ({
+      ...prev,
+      creator: data.creator,
+      admins: data.admins || [],
+    }));
+  };
+
+
+  const isUserAdmin = (id) =>
+    channelState.admins.includes(id);
+
 
   return (
     <>
@@ -403,7 +785,10 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
               </div>
               <div className="flex items-center gap-4">
                 <i className="fa-solid fa-magnifying-glass text-lg text-blue-400 hover:text-black cursor-pointer h-10 pt-3 "></i>
-                <i onClick={() => setShowInfo(true)} className="fa-solid fa-table-columns text-lg text-blue-400 hover:text-black cursor-pointer h-10 pt-3"></i>
+                <i onClick={() => {
+                  setShowInfo(true);
+                  loadMembers();
+                }} className="fa-solid fa-table-columns text-lg text-blue-400 hover:text-black cursor-pointer h-10 pt-3"></i>
                 <i onClick={() => setShowMenu(true)} className="fa-solid fa-ellipsis text-lg text-blue-400 hover:text-black cursor-pointer h-10 pt-3"></i>
               </div>
             </div>
@@ -564,7 +949,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                     <div className="relative bg-blue-400 px-3 py-2 rounded-2xl flex flex-col max-w-[75%]">
 
                       {BroadCastChannel === true ?
-                        "" : String(user._id) === String(channel.creator) ? (
+                        "" : String(user._id) === String(channelState.creator) ? (
                           <div className="absolute top-1 -right-4" title="Pin">
                             <i
                               onClick={() => {
@@ -621,6 +1006,73 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
 
                       {/* MESSAGE TEXT */}
                       <span className="break-all">{msg.text}</span>
+                      {msg.uploading && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.9 }}
+                          transition={{ duration: 0.25 }}
+                          className="bg-gray-100 p-3 rounded-xl w-fit flex flex-col gap-2 shadow-sm"
+                        >
+                          {/* FILE INFO */}
+                          <div className="flex items-center gap-2">
+                            <i className="fa-solid fa-file-arrow-up text-blue-500"></i>
+
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium">
+                                {msg.fileName}
+                              </span>
+
+                              <span className="text-xs text-gray-500">
+                                {formatSize(msg.fileSize)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* PROGRESS BAR */}
+                          <div className="w-48 h-2 bg-gray-300 rounded-full overflow-hidden">
+                            <motion.div
+                              className="h-full bg-blue-500 rounded-full"
+                              animate={{ width: `${msg.progress}%` }}
+                              transition={{ ease: "easeOut", duration: 0.3 }}
+                            />
+                          </div>
+
+                          {/* STATUS */}
+                          <div className="flex justify-between text-xs text-gray-600">
+                            <span>Uploading...</span>
+                            <span>{msg.progress}%</span>
+                          </div>
+                        </motion.div>
+                      )}
+
+                      {msg.file && msg.fileType?.startsWith("audio") ? (
+                        <div className="mt-2 bg-white p-2 rounded-xl shadow w-fit">
+                          <audio controls src={msg.file} />
+                          <div className="text-xs text-gray-500">
+                            {formatSize(msg.fileSize)}
+                          </div>
+                        </div>
+                      ) : msg.file ? (
+                        <motion.div
+                          onClick={() => handleDownload(msg.file, msg.fileName || "file")}
+                          className="mt-2 bg-white px-3 py-2 rounded-xl flex items-center gap-3 text-sm w-fit shadow cursor-pointer"
+                        >
+                          <i className="fa-solid fa-file-arrow-down text-blue-500"></i>
+
+                          <div className="flex flex-col">
+                            <span className="font-medium text-gray-800">
+                              {msg.fileName || "File"}
+                            </span>
+
+                            <span className="text-xs text-gray-500">
+                              {formatSize(msg.fileSize)}
+                            </span>
+                          </div>
+                        </motion.div>
+                      ) : null}
+
+
                       <div className="flex items-center justify-between gap-3">
                         {/*  REACTION PILLS (BOTTOM LEFT) */}
                         <AnimatePresence>
@@ -632,7 +1084,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                               exit={{ opacity: 0, y: 10, scale: 0.9 }}
                               transition={{ duration: 0.25 }}
 
-                              className="flex gap-1"
+                              className="flex gap-1 mt-1"
                             >
                               {Object.entries(msg.reactions)
                                 .filter(([_, count]) => count > 0)
@@ -665,13 +1117,18 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                         {/* FOOTER */}
 
                         {BroadCastChannel === true ? (
-                          msg.seenCount > 1 ? <i className="fa-solid fa-check-double text-green-200"></i> : <i className="fa-solid fa-check-double"></i>
+                          msg.seenCount > 1 ? (<div className=" flex w-full items-center gap-1  justify-end mt-1"><span className="text-xs font-semibold">{formatIndianTime(msg.createdAt)}</span><i className="fa-solid fa-check-double text-green-200"></i></div>) : (
+                            <div className="flex w-full items-center gap-1  justify-end mt-1">
+                              <i className="fa-solid fa-check-double"></i>
+                              <span className="text-xs font-semibold">{formatIndianTime(msg.createdAt)}</span>
+                            </div>
+                          )
                         ) : (
                           <div className="flex justify-end text-xs text-gray-200 mt-1 gap-2">
                             <span className="text-xs text-white">
                               <i className="fa-solid fa-eye"></i> {msg.seenCount || 0}
                             </span>
-                            {msg.time}
+                            {formatIndianTime(msg.createdAt)}
                           </div>
                         )}
                       </div>
@@ -789,33 +1246,6 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
               )}
             </motion.div>
           )}
-          {/* <footer className="p-4 border-t bg-white flex items-center gap-2">
-            {String(user._id) === String(channel.creator) ? (
-              <>
-                <textarea
-                  type="text"
-                  value={message}
-                  onChange={handleInputChange}
-                  disabled={!isAdmin}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSendMessage();
-                  }}
-                  placeholder="Only admin can send messages"
-                  className="flex-1 px-4 py-2 rounded-full bg-gray-100  outline-none"
-                />
-                <button
-                  disabled={!isAdmin}
-                  className="bg-gray-300 px-4 py-2 rounded-full "
-                >
-                  Send
-                </button>
-              </>
-            ) : (
-              <div className="text-center  w-[100%]">
-                <p>Only Admin Can Message</p>
-              </div>
-            )}
-          </footer> */}
           {!isAdmin ? (
             <footer className="p-3 border-t bg-white flex items-end gap-2 shrink-0">
               <div
@@ -867,6 +1297,35 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                 ></i>
 
               </div>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                className="hidden"
+                id="fileInput"
+                onChange={(e) => {
+                  const file = e.target.files[0];
+                  if (file) handleFileSend(file);
+                }}
+              />
+
+              <label
+                htmlFor="fileInput"
+                className="cursor-pointer w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300"
+              >
+                <i className="fa-solid fa-paperclip"></i>
+              </label>
+
+              <div
+                onClick={() => {
+                  setShowAudioModal(true);
+                  startRecording();
+                }}
+                className="w-10 h-10 flex items-center justify-center bg-red-500 text-white rounded-full cursor-pointer"
+              >
+                <i className="fa-solid fa-microphone"></i>
+              </div>
+
+
 
               {/* SEND BUTTON */}
               <button
@@ -885,6 +1344,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
             </footer>
           )}
         </div>
+
 
         {/* <AnimatePresence> */}
         {showMenu && (
@@ -1016,8 +1476,125 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                 <div className="text-sm text-gray-600">
                   {channel?.description || "No description"}
                 </div>
+                {creatorBio && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-between bg-white p-3 rounded-xl shadow-sm mb-3"
+                  >
+                    {/* LEFT SIDE */}
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={creatorBio.picture}
+                        alt={creatorBio.name}
+                        className="w-11 h-11 rounded-full object-contain border-2 border-blue-500"
+                        onError={(e) => {
+                          e.target.src = "/m.svg";
+                        }}
+                      />
 
-                <div className="flex flex-col ">
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-sm">
+                          {creatorBio.name}
+                        </span>
+
+                        <span className="text-xs text-gray-500">
+                          Channel Admin
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* RIGHT SIDE BADGE */}
+                    <div className="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded-full font-medium">
+                      Admin
+                    </div>
+                  </motion.div>
+                )}
+                <div>
+                  <h2 className="font-semibold mb-2">Members</h2>
+
+                  {/* 🔄 LOADING */}
+                  {loadingMembers && <MembersSkeleton />}
+
+                  {/* ❌ EMPTY */}
+                  {!loadingMembers && members.length === 0 && (
+                    <div className="text-gray-500 text-sm">No members yet</div>
+                  )}
+
+                  {!loadingMembers && members.length > 0 && (
+                    <div className="flex flex-col gap-3">
+                      <AnimatePresence>
+                        {members.filter((d) => d._id !== channelState.creator).map((d, i) => {
+                          const isOpen = activeUser === d._id;
+
+                          return (
+                            <motion.div
+                              key={d._id}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.9 }}
+                              transition={{ delay: i * 0.05 }}
+                              className="bg-white p-2 rounded-xl shadow-sm flex flex-col gap-2"
+                            >
+                              {/* TOP ROW */}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <img
+                                    src={d.picture}
+                                    alt={d.name}
+                                    className="w-10 h-10 rounded-full object-cover"
+                                    onError={(e) => (e.target.src = "/m.svg")}
+                                  />
+                                  <span className="text-sm font-medium capitalize">
+                                    {d.name}
+                                  </span>
+                                </div>
+
+                                <button
+                                  onClick={() =>
+                                    setActiveUser(isOpen ? null : d._id)
+                                  }
+                                  className="text-xs px-2 py-1 bg-gray-200 rounded-md"
+                                >
+                                  Edit
+                                </button>
+                              </div>
+
+                              {/* ACTIONS */}
+                              <AnimatePresence>
+                                {isOpen && (
+                                  <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: "auto" }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="flex gap-2"
+                                  >
+                                    {isUserAdmin(d._id) ? (
+                                      <button
+                                        onClick={() => removeUser(d._id)}
+                                        className="flex-1 bg-red-500 text-white text-xs py-1 rounded"
+                                      >
+                                        Remove Admin
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => makeAdmin(d._id)}
+                                        className="flex-1 bg-blue-500 text-white text-xs py-1 rounded"
+                                      >
+                                        Make Admin
+                                      </button>
+                                    )}
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </div>
+                  )}
+                </div>
+                {/* <div className="flex flex-col ">
                   <div className="flex gap-10 items-center cursor-pointer hover:bg-blue-100 py-1 px-2 rounded-md">
                     <i className="fa-solid fa-photo-film"></i>
                     <span>Photos</span>
@@ -1034,8 +1611,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                     <i className="fa-solid fa-square-poll-vertical"></i>
                     <span>Polls</span>
                   </div>
-                </div>
-
+                </div> */}
               </div>
             </motion.div>
           </>
@@ -1146,6 +1722,76 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                   Yes
                 </button>
               </div>
+
+            </motion.div>
+          </motion.div>
+        )}
+        {showAudioModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.8, y: 50 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.8, y: 50 }}
+              className="bg-white p-6 rounded-2xl shadow-xl w-[320px] flex flex-col items-center gap-4"
+            >
+
+              {/* 🎤 RECORDING STATE */}
+              {isRecording && (
+                <div className="flex flex-col items-center gap-2 text-red-500">
+                  <i className="fa-solid fa-microphone text-3xl animate-pulse"></i>
+                  <span className="text-sm">Recording...</span>
+                </div>
+              )}
+
+              {/* ⏹ STOP */}
+              {isRecording && (
+                <button
+                  onClick={stopRecording}
+                  className="bg-red-500 text-white px-4 py-2 rounded-full"
+                >
+                  Stop
+                </button>
+              )}
+
+              {/* ▶️ PREVIEW */}
+              {audioUrl && (
+                <div className="flex flex-col items-center gap-3 w-full">
+
+                  <audio controls src={audioUrl} className="w-full" />
+
+                  <div className="flex gap-2 w-full">
+                    <button
+                      onClick={sendAudio}
+                      className="flex-1 bg-green-500 text-white py-2 rounded-lg"
+                    >
+                      Send
+                    </button>
+
+                    <button
+                      onClick={cancelAudio}
+                      className="flex-1 bg-gray-300 py-2 rounded-lg"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                </div>
+              )}
+
+              {/* ❌ CLOSE (if user exits early) */}
+              {!isRecording && !audioUrl && (
+                <button
+                  onClick={() => setShowAudioModal(false)}
+                  className="text-sm text-gray-500"
+                >
+                  Close
+                </button>
+              )}
 
             </motion.div>
           </motion.div>

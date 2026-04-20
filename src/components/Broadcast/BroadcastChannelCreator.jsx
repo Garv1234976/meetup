@@ -108,6 +108,7 @@ export default function BroadcastChannelCreator({ onClose }) {
 
                     {/* FRIEND LIST */}
                     <div className="max-h-60 overflow-y-auto flex flex-col gap-2 bg-gray-300 rounded-lg">
+                        
                         {friends.map((f) => (
                             <motion.div
                                 key={f._id}
