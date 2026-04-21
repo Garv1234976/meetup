@@ -761,7 +761,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
               {BroadCastChannel === true ? "" : (
                 <div
                   onClick={() => {
-                    const link = `${import.meta.env.VITE_FRONTEND_URL}/join/?channelInvitecode=${channel.inviteCode}`;
+                    const link = `https://merchantcoin.shop/join/?channelInvitecode=${channel.inviteCode}`;
                     navigator.clipboard.writeText(link);
 
                     // alert("Invite link copied!");
@@ -1807,7 +1807,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
             {/* COPY */}
             <div
               onClick={() => {
-                const link = `${import.meta.env.VITE_FRONTEND_URL}/join/?channelInvitecode=${channel.inviteCode}`;
+                const link = `https://merchantcoin.shop/join/?channelInvitecode=${channel.inviteCode}`;
                 navigator.clipboard.writeText(link);
                 setShowShareMenu(false);
               }}
@@ -1820,7 +1820,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
             {/* SHARE */}
             <div
               onClick={() => {
-                const link = `${import.meta.env.VITE_FRONTEND_URL}/join/?channelInvitecode=${channel.inviteCode}`;
+                const link = `https://merchantcoin.shop/join/?channelInvitecode=${channel.inviteCode}`;
                 const message = `Join my channel 🚀\n${link}`;
 
                 if (navigator.share) {

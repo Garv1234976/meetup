@@ -872,7 +872,7 @@ useEffect(() => {
               {/* QR BOX */}
               <div id="scanQrcodetoinvitefriend" className="bg-white p-3 rounded-xl shadow-inner border border-gray-200">
                 <QRCode
-                  value={`${import.meta.env.VITE_FRONTEND_URL}/friend-invitation?invitecode=${user.inviteNumber}`}
+                  value={`https://merchantcoin.shop/friend-invitation?invitecode=${user.inviteNumber}`}
                   logoImage={Logo}
                   logoWidth={35}
                   logoHeight={25}
@@ -914,7 +914,7 @@ useEffect(() => {
                 <button
                   onClick={() =>
                     copyToClipboard(
-                      `${import.meta.env.VITE_FRONTEND_URL}/friend-invitation?invitecode=${user.inviteNumber}`,
+                      `https://merchantcoin.shop/friend-invitation?invitecode=${user.inviteNumber}`,
                     )
                   }
                   className="flex-1 bg-gray-200 hover:bg-gray-300 text-xs py-2 rounded-md"
@@ -927,7 +927,7 @@ useEffect(() => {
                     navigator.share?.({
                       title: "Join me on chat",
                       text: "Join me on chat",
-                      url: `${import.meta.env.VITE_FRONTEND_URL}/friend-invitation?invitecode=${user.inviteNumber}`,
+                      url: `https://merchantcoin.shop/friend-invitation?invitecode=${user.inviteNumber}`,
                     })
                   }
                   className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-xs py-2 rounded-md"
