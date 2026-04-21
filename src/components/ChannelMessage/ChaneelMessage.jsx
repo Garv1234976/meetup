@@ -68,7 +68,6 @@ const MembersSkeleton = () => (
 export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const { user } = useAuth();
   const channel = fullchannelobject;
-  console.log(channel);
 
   const BroadCastChannel = channel.isBroadcast
 
@@ -107,6 +106,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const containerRef = useRef();
   const navigate = useNavigate();
   const seenMessagesRef = useRef(new Set());
+  const [showShareMenu, setShowShareMenu] = useState(false);
   const [channelState, setChannelState] = useState({
     creator: null,
     admins: [],
@@ -114,7 +114,6 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const isAdmin =
     channelState.creator === user._id ||
     channelState.admins.includes(user._id);
-  console.log(isAdmin);
   const textareaRef = useRef(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -238,16 +237,18 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
     if (!socket || !messages.length) return;
 
     messages.forEach((msg) => {
-      // ✅ already seen → skip
-      if (seenMessagesRef.current.has(msg._id)) return;
+      if (String(msg.sender) === String(user._id)) return;
+
+      const alreadySeen = msg.seenBy?.some(
+        (s) => String(s.userId) === String(user._id)
+      );
+
+      if (alreadySeen) return;
 
       socket.emit("channel_seen", {
         channelId: channelid,
         messageId: msg._id,
       });
-
-      // ✅ mark as seen locally
-      seenMessagesRef.current.add(msg._id);
     });
   }, [messages]);
 
@@ -760,9 +761,10 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
               {BroadCastChannel === true ? "" : (
                 <div
                   onClick={() => {
-                    const link = `${import.meta.env.VITE_BACK_DEV_API}/join/${channel.inviteCode}`;
+                    const link = `${import.meta.env.VITE_FRONTEND_URL}/join/?channelInvitecode=${channel.inviteCode}`;
                     navigator.clipboard.writeText(link);
-                    alert("Invite link copied!");
+
+                    // alert("Invite link copied!");
                   }}
                   className="hidden md:flex gap-10 items-center cursor-pointer hover:bg-blue-100 py-1 px-2 rounded-md"
                 >
@@ -770,18 +772,16 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                   <span>Share Invite Link</span>
                 </div>
               )}
-              <div
-                onClick={() => {
-                  const link = `${import.meta.env.VITE_BACK_DEV_API}/join/${channel.inviteCode}`;
+              <div className="relative">
+                <div
+                  onClick={() => setShowShareMenu((prev) => !prev)}
+                  className="cursor-pointer bg-green-300 px-2 flex items-center gap-1 rounded-xl font-semibold text-sm"
+                >
+                  <i className="sm:hidden fa-solid fa-share-nodes"></i>
+                  <span>Share</span>
+                </div>
 
-                  const message = `Join my channel 🚀\n${link}`;
 
-                  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-
-                  window.open(whatsappUrl, "_blank");
-                }}
-              >
-                <i class="sm:hidden fa-solid fa-share-nodes"></i>
               </div>
               <div className="flex items-center gap-4">
                 <i className="fa-solid fa-magnifying-glass text-lg text-blue-400 hover:text-black cursor-pointer h-10 pt-3 "></i>
@@ -796,7 +796,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
 
 
           {pinnedMessages.length > 0 && (
-            <motion.div className="absolute top-14 w-[100%] md:w-[62%] z-20 "
+            <motion.div className="absolute top-14 w-[100%] md:w-[62%] z-10 "
               key="pinned-bar"
               initial={{ y: -30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -1048,7 +1048,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
 
                       {msg.file && msg.fileType?.startsWith("audio") ? (
                         <div className="mt-2 bg-white p-2 rounded-xl shadow w-fit">
-                          <audio controls src={msg.file} />
+                          <audio className="w-50" controls src={msg.file} />
                           <div className="text-xs text-gray-500">
                             {formatSize(msg.fileSize)}
                           </div>
@@ -1794,6 +1794,49 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
               )}
 
             </motion.div>
+          </motion.div>
+        )}
+        {showShareMenu && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.9 }}
+            transition={{ duration: 0.2 }}
+            className="fixed right-34 top-16 bg-white shadow-lg rounded-lg w-44 z-[9999] overflow-hidden"
+          >
+            {/* COPY */}
+            <div
+              onClick={() => {
+                const link = `${import.meta.env.VITE_FRONTEND_URL}/join/?channelInvitecode=${channel.inviteCode}`;
+                navigator.clipboard.writeText(link);
+                setShowShareMenu(false);
+              }}
+              className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
+            >
+              <i className="fa-solid fa-link text-blue-500"></i>
+              <span>Copy Link</span>
+            </div>
+
+            {/* SHARE */}
+            <div
+              onClick={() => {
+                const link = `${import.meta.env.VITE_FRONTEND_URL}/join/?channelInvitecode=${channel.inviteCode}`;
+                const message = `Join my channel 🚀\n${link}`;
+
+                if (navigator.share) {
+                  navigator.share({ title: "Join Channel", text: message, url: link });
+                } else {
+                  const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+                  window.open(whatsappUrl, "_blank");
+                }
+
+                setShowShareMenu(false);
+              }}
+              className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-2"
+            >
+              <i className="fa-solid fa-share text-green-500"></i>
+              <span>Share</span>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -9,7 +9,8 @@ import { CreateChannel } from "./CreateChannel/CreateChannel";
 import { VideoCall } from "./VideoCall/VideoCall";
 import { RoomJoin } from "./VideoCall/RoomJoin";
 import BroadcastChannelCreator from "./Broadcast/BroadcastChannelCreator";
-
+import JoinChannelOverview from './Join/JoinChannelOverview';
+import FriendInvitation from "./Join/FriendInvitation";
 export default function AppRoutes({ clientId }) {
   return (
     <Routes>
@@ -51,6 +52,22 @@ export default function AppRoutes({ clientId }) {
         element={
           <ProtectedRoute>
             <BroadcastChannelCreator/>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/join"
+        element={
+          <ProtectedRoute>
+            <JoinChannelOverview />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/friend-invitation"
+        element={
+          <ProtectedRoute>
+            <FriendInvitation />
           </ProtectedRoute>
         }
       />

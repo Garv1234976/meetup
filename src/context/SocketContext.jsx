@@ -147,8 +147,22 @@ export function SocketProvider({ children }) {
   }));
 });
 
+newSocket.on("new_friend_added", ({ friendId, chatId }) => {
+  console.log("🔥 New friend added:", friendId, chatId);
 
-    return () => newSocket.disconnect();
+  // 🔥 notify whole app
+  window.dispatchEvent(
+    new CustomEvent("new-friend-added", {
+      detail: { friendId, chatId },
+    })
+  );
+});
+
+
+    return () => {
+  newSocket.off("new_friend_added");
+  newSocket.disconnect();
+};
     
   }, [user, loading]);
 

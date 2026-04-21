@@ -426,7 +426,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
           className="overflow-y-auto scrollbar scrollbar-thin scrollbar-track-sky-200  scrollbar-thumb-blue-400 max-h-[calc(100vh-130px)] px-2"
           style={{ scrollbarGutter: "stable" }}
         >
-          <AnimatePresence>
+          {/* <AnimatePresence> */}
             {filteredChatList.length === 0 ? (
               <div className="flex items-center justify-center py-3 ">
                 <div onClick={() => setOpenInvite(true)} className="bg-blue-500 flex items-end gap-5 px-3 py-1 rounded-md mt-50 cursor-pointer">
@@ -437,6 +437,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
             ) : ''}
             {filteredChatList.map((friend, i) => (
               <motion.div
+              key={i}
                 layout
                 initial={{ opacity: 0, scale: 0.8, x: -20 }}
                 animate={{
@@ -526,7 +527,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
                 </div>
               </motion.div>
             ))}
-          </AnimatePresence>
+          {/* </AnimatePresence> */}
         </div>
       </div>
 
