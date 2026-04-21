@@ -1824,7 +1824,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                 const message = `Join my channel 🚀\n${link}`;
 
                 if (navigator.share) {
-                  navigator.share({ title: "Join Channel", text: message, url: link });
+                  navigator.share({ title: "Join Channel", text: message });
                 } else {
                   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
                   window.open(whatsappUrl, "_blank");
