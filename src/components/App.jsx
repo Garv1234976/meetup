@@ -6,12 +6,13 @@ import { UserProvider } from "../context/Profile";
 import { useState } from "react";
 
 export default function MainApp() {
-   const [openInvite, setOpenInvite] = useState(false);
-    const [resetKey, setResetKey] = useState(0);
-
+  const [openInvite, setOpenInvite] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const handleResetApp = () => {
     setOpenInvite(false);
     setResetKey((prev) => prev + 1); 
+    setIsChatOpen(false);
   };
   return (
     <>
@@ -22,9 +23,10 @@ export default function MainApp() {
               <Sidebar_One
               openInvite={openInvite} 
               setOpenInvite={setOpenInvite}
+              isChatOpen={isChatOpen}
               onReset={handleResetApp}
               />
-              <Sidebar_Two setOpenInvite={setOpenInvite} resetKey={resetKey}/>
+              <Sidebar_Two setOpenInvite={setOpenInvite} resetKey={resetKey} setIsChatOpen={setIsChatOpen}/>
             </div>
           </UserProvider>
         </TypingProvider>

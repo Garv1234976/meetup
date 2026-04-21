@@ -40,7 +40,7 @@ const SkeletonCard = ({ i }) => (
   </motion.div>
 );
 
-export function Sidebar_One({ token, openInvite, setOpenInvite,onReset  }) {
+export function Sidebar_One({ token, openInvite, setOpenInvite,onReset,isChatOpen   }) {
   const { user, setUser } = useAuth();
   const [active, setActive] = useState(null);
   const [open, setOpen] = useState(false);
@@ -396,7 +396,9 @@ useEffect(() => {
   return (
     <>
       <div
-        className="group w-[15%] sm:w-[10%] md:w-[4%] hover:md:w-[6%] transition-all duration-75 "
+        className={`group 
+    ${isChatOpen ? "hidden md:flex" : "flex"} 
+    w-[15%] sm:w-[10%] md:w-[4%] hover:md:w-[6%] transition-all duration-75`}
         style={{ backgroundColor: Theme.thirdBackgroundColor }}
       >
         <div className="flex items-center justify-between h-screen flex-col py-5 ">

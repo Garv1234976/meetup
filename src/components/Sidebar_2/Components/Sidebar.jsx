@@ -100,7 +100,7 @@ const templates = {
   `,
 };
 
-export function Sidebar_Two({ token, setOpenInvite, resetKey }) {
+export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
   const off = useOnline();
   const { user } = useAuth()
   const { socket, channelUnread } = useSocket();
@@ -150,6 +150,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey }) {
       setSelectedChannel(null);
     }
 
+    setIsChatOpen(true);
   }, [channelIdFromUrl, friends]);
   const handleEscKey = useCallback(
     (event) => {
@@ -301,6 +302,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey }) {
       if (updatedFriend) {
         setSelectedFriend(updatedFriend);
         setSelectedChannel(null);
+        setIsChatOpen(true);
         navigate(`/chats?Id=${updatedFriend._id}`, { replace: true });
       }
 
@@ -312,6 +314,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey }) {
   const handleChannelClick = (channel) => {
     setSelectedChannel(channel);
     setSelectedFriend(null);
+    setIsChatOpen(true);
     navigate(`/chats?Id=${channel._id}`, { replace: true });
   };
 
@@ -533,14 +536,12 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey }) {
             : "hidden md:flex w-[65%]"
           }`}
       >
-
-
         {selectedChannel ? (
-          <ChannelMessage channelid={selectedChannel._id} fullchannelobject={selectedChannel} onBack={() => { setSelectedChannel(null); setSelectedFriend(null); }} />
+          <ChannelMessage channelid={selectedChannel._id} fullchannelobject={selectedChannel} onBack={() => { setSelectedChannel(null); setSelectedFriend(null);setIsChatOpen(false); }} />
         ) : selectedFriend ? (
           <Messaging
             slectedFriends={selectedFriend}
-            onBack={() => { setSelectedFriend(null); setSelectedChannel(null) }}
+            onBack={() => { setSelectedFriend(null); setSelectedChannel(null);setIsChatOpen(false); }}
           />
         ) : (
           <div

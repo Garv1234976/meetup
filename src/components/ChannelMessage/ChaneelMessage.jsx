@@ -796,7 +796,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
 
 
           {pinnedMessages.length > 0 && (
-            <motion.div className="absolute top-14 w-[62%] z-20 "
+            <motion.div className="absolute top-14 w-[100%] md:w-[62%] z-20 "
               key="pinned-bar"
               initial={{ y: -30, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -838,7 +838,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                     }, 1200);
                   }
                 }}
-                className="w-full px-3 py-1 flex items-center gap-2 cursor-pointer "
+                className="w-full px-3 py-1 flex items-center gap-2 cursor-pointer  wrap-anywhere "
                 style={{ background: Theme.thirdBackgroundColor }}
               >
 
