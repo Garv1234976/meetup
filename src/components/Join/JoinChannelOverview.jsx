@@ -1,10 +1,11 @@
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-
+console.log("Dom Loaded")
 export default function JoinChannelOverview() {
   const [searchParams] = useSearchParams();
   const code = searchParams.get("channelInvitecode"); 
-
+  console.log(code);
+  
   const navigate = useNavigate();
 
   const [channel, setChannel] = useState(null);
