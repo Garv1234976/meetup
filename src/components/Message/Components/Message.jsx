@@ -61,13 +61,14 @@ const SkeletonBubble = ({ isFromFriend }) => {
 };
 export function Messaging({ slectedFriends, onBack }) {
   // console.log("This is the Message compo",JSON.stringify(slectedFriends));
-  const { socket, isReady } = useSocket();
+  const { socket, isReady,setActiveChat, setChatUnread,chatMessages  } = useSocket();
   const { user } = useAuth();
   const { updateTyping } = useTyping();
   const currentUserId = user?._id;
   const dispatch = useDispatch();
-  const messages = useSelector((state) => state.chat.messages);
-
+   const messages = useSelector((state) => state.chat.messages);
+  // const messages = chatMessages[slectedFriends.chatId] || [];
+// 
   const [message, setMessage] = useState("");
   const [typingUserId, setTypingUserId] = useState(null);
   const [suggestText, setSuggestText] = useState([]);
@@ -84,6 +85,16 @@ export function Messaging({ slectedFriends, onBack }) {
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const navigate = useNavigate();
   // Fetch messages on chat change
+
+useEffect(() => {
+  if (!slectedFriends?.chatId) return;
+
+  setActiveChat(slectedFriends.chatId);
+
+  return () => setActiveChat(null);
+}, [slectedFriends?.chatId]);
+
+
   useEffect(() => {
     if (!slectedFriends?.chatId) return;
 
@@ -96,9 +107,12 @@ export function Messaging({ slectedFriends, onBack }) {
 
   useEffect(() => {
     if (!socket || !slectedFriends?.chatId) return;
-
     const handleMessage = (data) => {
-      if (data.from === slectedFriends._id) {
+      const isThisChat =
+        (data.from === slectedFriends._id && data.to === currentUserId) ||
+        (data.from === currentUserId && data.to === slectedFriends._id);
+
+      if (isThisChat) {
         dispatch(addMessage(data));
       }
     };
@@ -246,20 +260,30 @@ export function Messaging({ slectedFriends, onBack }) {
   };
 
   const handleReaction = (messageId, emoji) => {
-    socket.emit("react_message", {
+    // 🔥 instant UI update (sender side)
+    dispatch(toggleReaction({
       messageId,
       emoji,
       userId: currentUserId,
-    });
+      chatId: slectedFriends.chatId
+    }));
 
-    dispatch(toggleReaction({ messageId, emoji, userId: currentUserId }));
+    // 🔥 send to server
+    socket.emit("react_message", {
+      messageId,
+      emoji,
+      chatId: slectedFriends.chatId,
+      to: slectedFriends._id
+    });
   };
 
   useEffect(() => {
     if (!socket) return;
 
-    const onReaction = ({ messageId, emoji, userId }) => {
-      dispatch(toggleReaction({ messageId, emoji, userId }));
+    const onReaction = ({ messageId, emoji, userId, chatId }) => {
+      if (userId === currentUserId) return;
+
+      dispatch(toggleReaction({ messageId, emoji, userId, chatId }));
     };
 
     socket.on("message_reaction", onReaction);
@@ -321,7 +345,8 @@ export function Messaging({ slectedFriends, onBack }) {
         {/* Header */}
         <header className="sticky top-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center gap-3 z-10 border-b border-gray-100 dark:border-gray-700">
           <i
-            onClick={() => {onBack();
+            onClick={() => {
+              onBack();
               navigate("/chats", { replace: true });
             }}
             className="fa-solid fa-arrow-left text-xl text-white cursor-pointer"
@@ -420,8 +445,8 @@ export function Messaging({ slectedFriends, onBack }) {
                             {/* EMOJI BUTTON (HOVER ONLY) */}
                             <div
                               className={`relative transition-all duration-200 cursor-pointer ${hoveredMessageId === msg._id
-                                  ? "opacity-100 scale-100"
-                                  : "opacity-100 scale-75"
+                                ? "opacity-100 scale-100"
+                                : "opacity-100 scale-75"
                                 } ${isFromFriend ? "ml-1" : "mr-1"}`}
                             >
                               <div
@@ -471,8 +496,8 @@ export function Messaging({ slectedFriends, onBack }) {
                             {/* MESSAGE BUBBLE */}
                             <div
                               className={`px-4 py-2 text-sm rounded-2xl shadow-md relative break-words whitespace-pre-wrap max-w-xl ${isFromFriend
-                                  ? "bg-white text-gray-800 rounded-tl-none"
-                                  : "bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-tr-none"
+                                ? "bg-white text-gray-800 rounded-tl-none"
+                                : "bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-tr-none"
                                 }`}
                             >
                               {/* TEXT */}
@@ -488,8 +513,8 @@ export function Messaging({ slectedFriends, onBack }) {
                               {/* TIME */}
                               <div
                                 className={`text-[10px] mt-1 ${isFromFriend
-                                    ? "text-gray-500"
-                                    : "text-blue-100"
+                                  ? "text-gray-500"
+                                  : "text-blue-100"
                                   } text-right`}
                               >
                                 {new Date(msg.timestamp).toLocaleTimeString(

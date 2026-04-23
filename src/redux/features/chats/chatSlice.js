@@ -12,16 +12,26 @@ const chatSlice = createSlice({
     initialState,
     reducers: {
         addMessage: (state, action) => {
-            const msg = action.payload;
-            state.messages.push(msg)
-            // state.messages.push(action.payload);
+  const msg = action.payload;
 
-            const authUserId = msg.authUserId || 'curr user';
-            const friendId = msg.from === authUserId ? msg.to : msg.from;
+  const existingIndex = state.messages.findIndex(
+    (m) =>
+      String(m._id) === String(msg._id) ||
+      (
+        m.text === msg.text &&
+        m.from === msg.from &&
+        m.to === msg.to
+      )
+  );
 
-            state.lastMessagesByUserId[friendId] = msg
-            localStorage.setItem(`lstmsg`, JSON.stringify(msg));
-        },
+  if (existingIndex !== -1) {
+    // 🔥 replace temp message with real one
+    state.messages[existingIndex] = msg;
+  } else {
+    // normal add
+    state.messages.push(msg);
+  }
+},
         setMessages: (state, action) => {
             state.messages = action.payload;
         },
@@ -33,26 +43,33 @@ const chatSlice = createSlice({
             localStorage.setItem('byeMe', action.payload)
         },
         toggleReaction: (state, action) => {
-            const { messageId, userId, emoji } = action.payload;
-            const msg = state.messages.find((m) => m._id === messageId);
-            if (!msg) return;
+  const { messageId, userId, emoji } = action.payload;
 
-            if (!msg.reactions) msg.reactions = [];
+  const msg = state.messages.find(
+    (m) => String(m._id) === String(messageId)
+  );
 
-            const existing = msg.reactions.find(
-                (r) => r.userId === userId && r.emoji === emoji
-            );
+//   if (!msg) return;
 
-            if (existing) {
-                // Remove reaction (toggle off)
-                msg.reactions = msg.reactions.filter(
-                    (r) => !(r.userId === userId && r.emoji === emoji)
-                );
-            } else {
-                // Add reaction
-                msg.reactions.push({ userId, emoji });
-            }
-        },
+if (!msg) {
+  // 🔥 message not yet loaded → skip safely
+  console.log("⚠️ message not found yet, reaction delayed");
+  return;
+}
+  if (!msg.reactions) msg.reactions = [];
+
+  const existing = msg.reactions.find(
+    (r) => r.userId === userId && r.emoji === emoji
+  );
+
+  if (existing) {
+    msg.reactions = msg.reactions.filter(
+      (r) => !(r.userId === userId && r.emoji === emoji)
+    );
+  } else {
+    msg.reactions.push({ userId, emoji });
+  }
+},
 
     },
 });

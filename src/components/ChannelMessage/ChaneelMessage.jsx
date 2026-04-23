@@ -200,7 +200,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
     if (!socket) return;
 
     const handlePreview = (data) => {
-      console.log("PREVIEW:", JSON.stringify(data));
+      // console.log("PREVIEW:", JSON.stringify(data));
       setGetPreviewData(data);
       setIsPreviewLoading(false);
       setIsPreviewLoading(false);
@@ -695,6 +695,28 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
     }));
   };
 
+  useEffect(() => {
+    const handler = (e) => {
+      const { channelId, enabled, duration } = e.detail;
+
+      if (channelId !== channelid) return;
+
+      // 🔥 update local state
+      setChannelState((prev) => ({
+        ...prev,
+        autoDeleteEnabled: enabled,
+      }));
+
+      // optional refresh
+      refreshChannel();
+    };
+
+    window.addEventListener("auto-delete-updated", handler);
+
+    return () => {
+      window.removeEventListener("auto-delete-updated", handler);
+    };
+  }, [channelid]);
 
   const isUserAdmin = (id) =>
     channelState.admins.includes(id);
@@ -1393,6 +1415,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                   Leave Channel
                 </button> */}
                 {BroadCastChannel === true ? (
+
                   <div
                     onClick={() => setShowDeleteModal(true)}
                     className="px-4 py-3 hover:bg-gray-100 text-left text-red-500 cursor-pointer"
@@ -1400,11 +1423,37 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                     Delete Broadcast
                   </div>
                 ) : isAdmin ? (
-                  <div
-                    onClick={() => setShowDeleteModal(true)}
-                    className="px-4 py-3 hover:bg-gray-100 text-left text-red-500 cursor-pointer"
-                  >
-                    Delete Channel
+                  <div>
+                    <div
+                      onClick={() => {
+                        socket.emit("toggle_auto_delete", {
+                          channelId: channelid,
+                          enabled: !channelState.autoDeleteEnabled,
+                          duration: 24,
+                        });
+                      }}
+                      className="px-4 py-3 hover:bg-gray-100 flex items-center justify-between cursor-pointer"
+                    >
+                      <span className="text-sm font-medium">
+                        Auto Delete (24h)
+                      </span>
+
+                      <div
+                        className={`w-11 h-6 flex items-center rounded-full p-1 transition duration-300 ${channelState.autoDeleteEnabled ? "bg-green-500" : "bg-gray-300"
+                          }`}
+                      >
+                        <div
+                          className={`bg-white w-4 h-4 rounded-full shadow-md transform transition duration-300 ${channelState.autoDeleteEnabled ? "translate-x-5" : "translate-x-0"
+                            }`}
+                        />
+                      </div>
+                    </div>
+                    <div
+                      onClick={() => setShowDeleteModal(true)}
+                      className="px-4 py-3 hover:bg-gray-100 text-left text-red-500 cursor-pointer"
+                    >
+                      Delete Channel
+                    </div>
                   </div>
                 ) : (
                   <div
@@ -1550,14 +1599,16 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                                   </span>
                                 </div>
 
-                                <button
-                                  onClick={() =>
-                                    setActiveUser(isOpen ? null : d._id)
-                                  }
-                                  className="text-xs px-2 py-1 bg-gray-200 rounded-md"
-                                >
-                                  Edit
-                                </button>
+                                {isAdmin === true ? (
+                                  <button
+                                    onClick={() =>
+                                      setActiveUser(isOpen ? null : d._id)
+                                    }
+                                    className="text-xs px-2 py-1 bg-gray-200 rounded-md"
+                                  >
+                                    Edit
+                                  </button>
+                                ) : ''}
                               </div>
 
                               {/* ACTIONS */}
@@ -1695,6 +1746,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                     ? "Delete Channel?"
                     : "Leave Channel?"}
               </h2>
+
 
               {/* MESSAGE */}
               <p className="text-sm text-gray-500 text-center">

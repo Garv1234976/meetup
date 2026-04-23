@@ -20,10 +20,22 @@ export function SocketProvider({ children }) {
   const activeChannelRef = useRef(null);
   const userRef = useRef(null);
 
+  const [chatUnread, setChatUnread] = useState({});
+  const [chatMessages, setChatMessages] = useState({});
+  // const [chatUnread, setChatUnread] = useState({});
+  const [activeChat, setActiveChat] = useState(null);
+  const activeChatRef = useRef(null);
 
   useEffect(() => {
-  userRef.current = user;
-}, [user]);
+    activeChatRef.current = activeChat;
+  }, [activeChat]);
+
+
+
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   useEffect(() => {
     activeChannelRef.current = activeChannel;
@@ -44,7 +56,7 @@ export function SocketProvider({ children }) {
     });
 
     setSocket(newSocket);
-    
+
     // Channel creator sockets connection  Globally 
 
     /**
@@ -60,7 +72,7 @@ export function SocketProvider({ children }) {
 
       if (!isSelf && !isActive && notificationAudio.current) {
         notificationAudio.current.currentTime = 0;
-        notificationAudio.current.play().catch(() => {});
+        notificationAudio.current.play().catch(() => { });
       }
 
       setChannelMessages((prev) => {
@@ -81,11 +93,11 @@ export function SocketProvider({ children }) {
       setChannelUnread((prev) => {
         if (data.channelId === activeChannelRef.current) return prev;
         if (String(data.senderId) === String(user._id)) return prev;
-          return {
-            ...prev,
-            [data.channelId]: (prev[data.channelId] || 0) + 1,
-          };
-        });
+        return {
+          ...prev,
+          [data.channelId]: (prev[data.channelId] || 0) + 1,
+        };
+      });
     });
 
     /**
@@ -141,63 +153,97 @@ export function SocketProvider({ children }) {
 
 
     newSocket.on("channel_online_update", ({ channelId, onlineCount }) => {
-  setChannelOnline((prev) => ({
-    ...prev,
-    [channelId]: onlineCount,
-  }));
+      setChannelOnline((prev) => ({
+        ...prev,
+        [channelId]: onlineCount,
+      }));
+    });
+
+    newSocket.on("new_friend_added", ({ friendId, chatId }) => {
+      console.log("🔥 New friend added:", friendId, chatId);
+
+      // 🔥 notify whole app
+      window.dispatchEvent(
+        new CustomEvent("new-friend-added", {
+          detail: { friendId, chatId },
+        })
+      );
+    });
+
+    newSocket.on("auto_delete_updated", ({ channelId, enabled, duration }) => {
+      // broadcast globally (like you did for new friend)
+      window.dispatchEvent(
+        new CustomEvent("auto-delete-updated", {
+          detail: { channelId, enabled, duration },
+        })
+      );
+    });
+
+
+   newSocket.on("receive_message", (msg) => {
+  const currentChatId = activeChatRef.current;
+
+  const isActive = String(currentChatId) === String(msg.chatId);
+  const isSelf = String(msg.from) === String(userRef.current?._id);
+
+  // 🔥 UNREAD COUNT
+  if (!isActive && !isSelf) {
+    setChatUnread((prev) => ({
+      ...prev,
+      [msg.chatId]: (prev[msg.chatId] || 0) + 1,
+    }));
+  }
+
+  // 🔥 OPTIONAL: store message globally
+  setChatMessages((prev) => {
+    const prevMsgs = prev[msg.chatId] || [];
+    return {
+      ...prev,
+      [msg.chatId]: [...prevMsgs, msg],
+    };
+  });
+
 });
-
-newSocket.on("new_friend_added", ({ friendId, chatId }) => {
-  console.log("🔥 New friend added:", friendId, chatId);
-
-  // 🔥 notify whole app
-  window.dispatchEvent(
-    new CustomEvent("new-friend-added", {
-      detail: { friendId, chatId },
-    })
-  );
-});
-
 
     return () => {
-  newSocket.off("new_friend_added");
-  newSocket.disconnect();
-};
-    
+      newSocket.off("new_friend_added");
+      newSocket.disconnect();
+    };
+
   }, [user, loading]);
 
 
   useEffect(() => {
-  const unlockAudio = () => {
-    if (!notificationAudio.current) return;
+    const unlockAudio = () => {
+      if (!notificationAudio.current) return;
 
-    notificationAudio.current
-      .play()
-      .then(() => {
-        notificationAudio.current.pause();
-        notificationAudio.current.currentTime = 0;
-        console.log("🔓 Audio unlocked");
-      })
-      .catch(() => {});
+      notificationAudio.current
+        .play()
+        .then(() => {
+          notificationAudio.current.pause();
+          notificationAudio.current.currentTime = 0;
+          console.log("🔓 Audio unlocked");
+        })
+        .catch(() => { });
 
-    window.removeEventListener("click", unlockAudio);
-  };
+      window.removeEventListener("click", unlockAudio);
+    };
 
-  window.addEventListener("click", unlockAudio);
-}, []);
+    window.addEventListener("click", unlockAudio);
+  }, []);
 
 
-useEffect(() => {
-  const audio = new Audio("/notification.mp3");
-  audio.preload = "auto";
-  audio.volume = 0.7;
+  useEffect(() => {
+    const audio = new Audio("/notification.mp3");
+    audio.preload = "auto";
+    audio.volume = 0.7;
 
-  notificationAudio.current = audio;
-}, []);
+    notificationAudio.current = audio;
+  }, []);
 
 
   return (
-    <SocketContext.Provider value={{ socket, isReady, channelMessages, channelPinned, channelUnread, setActiveChannel,setChannelUnread,channelOnline, setChannelMessages, setChannelPinned }}>
+    <SocketContext.Provider value={{ socket, isReady, channelMessages, channelPinned, channelUnread, setActiveChannel, setChannelUnread, channelOnline, setChannelMessages, setChannelPinned,setActiveChat, setChatUnread }}>
       {children}
     </SocketContext.Provider>
   );

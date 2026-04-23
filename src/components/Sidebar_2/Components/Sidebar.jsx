@@ -103,7 +103,7 @@ const templates = {
 export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
   const off = useOnline();
   const { user } = useAuth()
-  const { socket, channelUnread } = useSocket();
+  const { socket, channelUnread,chatUnread  } = useSocket();
   const { typingUsers } = useTyping();
   const [active, setActive] = useState(null);
   const [selectedFriend, setSelectedFriend] = useState(null);
@@ -523,6 +523,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
                           {channelUnread[friend._id] > 99 ? "99+" : channelUnread[friend._id]}
                         </span>
                       )}
+                      
                   </span>
                 </div>
               </motion.div>
