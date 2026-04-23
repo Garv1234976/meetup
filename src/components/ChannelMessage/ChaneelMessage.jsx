@@ -996,7 +996,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
 
                       {/* LINK */}
                       {msg.preview?.url && (
-                        <span className="text-sm text-blue-900 hover:underline font-semibold rounded px-1 bg-blue-50 w-fit">
+                        <span className="text-sm text-blue-900 hover:underline font-semibold rounded px-1 bg-blue-50 w-fit wrap-anywhere">
                           <a href={msg.preview.url} target="_blank">
                             {msg.preview.url}
                           </a>
