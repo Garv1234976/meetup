@@ -77,8 +77,8 @@ const closeTourPrompt = () => setShowTourPrompt(false);
   element: "#addFriend",
   showProgress: false, 
   popover: {
-    title: "Add Friends",
-    description: "Friends n' Friends, Learn how to add them and Chat instantly. 🤔",
+    title: "Click This Icon",
+    description: "Tap Here! And Learn How to Add Friends 🤔",
     showButtons: ['', ''],
   },
 
