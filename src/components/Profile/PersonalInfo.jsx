@@ -7,13 +7,14 @@ const UserProfile = () => {
 
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState("");
-
+   const [enableTour, SetEnableTour] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
     phoneNumber: "",
   });
+
 
   useEffect(() => {
     if (user) {
@@ -245,6 +246,15 @@ const UserProfile = () => {
       </motion.div>
 
       {/* LOGOUT */}
+      <div
+
+      onClick={() => {
+        localStorage.setItem("tourActive", "true");
+        window.location.reload(); 
+      }}
+      >
+        <span className="bg-gray-500 py-1 text-white font-semibold px-2 rounded-lg">Enable Tour again</span>
+      </div>
       <div
         onClick={handleLogout}
         className="flex items-center justify-center gap-2 p-3 bg-red-500 hover:bg-red-600 text-white rounded-xl cursor-pointer w-full sm:w-fit"
