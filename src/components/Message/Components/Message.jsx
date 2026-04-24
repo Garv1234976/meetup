@@ -13,6 +13,7 @@ import { useTyping } from "../../../context/TypingContext";
 import { useSocket } from "../../../context/SocketContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { useTour } from "../../../context/TourContext";
 
 const htmlToText = (html) => {
   return html
@@ -69,6 +70,8 @@ export function Messaging({ slectedFriends, onBack }) {
    const messages = useSelector((state) => state.chat.messages);
   // const messages = chatMessages[slectedFriends.chatId] || [];
 // 
+  const { showTourPrompt, closeTourPrompt, startTourByType,resetSteps,registerStep,startTour } = useTour();
+
   const [message, setMessage] = useState("");
   const [typingUserId, setTypingUserId] = useState(null);
   const [suggestText, setSuggestText] = useState([]);
@@ -85,6 +88,27 @@ export function Messaging({ slectedFriends, onBack }) {
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const navigate = useNavigate();
   // Fetch messages on chat change
+useEffect(() => {
+  resetSteps();
+  registerStep({
+              element: "#inputforChat",
+              popover: {
+                title: "Send Message",
+                description: "Type and send your first message ✉️",
+              }
+            });
+  registerStep({
+              element: "#SendFirstMessageWithButton",
+              popover: {
+                title: "Tap to Send",
+                description: "Hit that send Button",
+              }
+            });
+
+
+            startTour();
+},[])
+
 
 useEffect(() => {
   if (!slectedFriends?.chatId) return;
@@ -615,6 +639,7 @@ useEffect(() => {
             ))}
           </div>
           <form
+          id="inputforChat"
             onSubmit={sendMessage}
             className="flex items-center gap-2 bg-white dark:bg-gray-700 p-2 rounded-full"
           >
@@ -625,6 +650,7 @@ useEffect(() => {
               <i className="fa-regular fa-face-smile text-xl"></i>
             </button>
             <input
+            
               type="text"
               placeholder="Write a message... or type / for cmd"
               value={message}
@@ -638,6 +664,7 @@ useEffect(() => {
               className="flex-1 px-3 py-2 outline-none bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-white"
             />
             <button
+            id="SendFirstMessageWithButton"
               type="submit"
               className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-full text-white font-medium text-sm transition-colors"
             >

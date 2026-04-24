@@ -2,15 +2,55 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Theme } from "../../theme/globalTheme";
+import { useTour } from "../../context/TourContext";
 
 export default function BroadcastChannelCreator({ onClose }) {
     const [selected, setSelected] = useState([]);
     const [friends, setFriends] = useState([]);
     const [name, setName] = useState("");
     const [loading, setLoading] = useState(false);
+    const { showTourPrompt, closeTourPrompt, startTourByType, resetSteps, registerStep, startTour } = useTour();
 
     const navigate = useNavigate();
 
+
+  useEffect(() => {
+  resetSteps();
+
+  registerStep({
+    element: "#BroadcastModal",
+    popover: {
+      title: "Broadcast Panel",
+      description: "Create and manage your broadcast messages here 📢",
+    }
+  })
+
+  registerStep({
+    element: "#broadcastInoput",
+    popover: {
+      title: "Name Broadcast",
+      description: "Enter a meaningful name for your broadcast ✏️",
+    }
+  })
+
+  registerStep({
+    element: "#Friendslist",
+    popover: {
+      title: "Select as many Friends",
+      description: "Choose friends to include in your broadcast 👥",
+    }
+  })
+
+  registerStep({
+    element: "#CreateBroadcastButton",
+    popover: {
+      title: "🚀 Make Broadcast",
+      description: "Create your broadcast and start sharing instantly 📢⚡",
+    }
+  })
+
+  startTour();
+}, [])
     const toggleUser = (id) => {
         setSelected((prev) =>
             prev.includes(id)
@@ -88,6 +128,7 @@ export default function BroadcastChannelCreator({ onClose }) {
                     animate={{ scale: 1, y: 0 }}
                     exit={{ scale: 0.8, y: 40 }}
                     style={{background: Theme.thirdBackgroundColor}}
+                    id="BroadcastModal"
                 >
 
                     {/* HEADER */}
@@ -100,6 +141,7 @@ export default function BroadcastChannelCreator({ onClose }) {
 
                     {/* NAME INPUT */}
                     <input
+                    id="broadcastInoput"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className="border p-2 rounded-md text-sm"
@@ -107,7 +149,7 @@ export default function BroadcastChannelCreator({ onClose }) {
                     />
 
                     {/* FRIEND LIST */}
-                    <div className="max-h-60 overflow-y-auto flex flex-col gap-2 bg-gray-300 rounded-lg">
+                    <div id="Friendslist" className="max-h-60 overflow-y-auto flex flex-col gap-2 bg-gray-300 rounded-lg">
                         
                         {friends.map((f) => (
                             <motion.div
@@ -135,6 +177,7 @@ export default function BroadcastChannelCreator({ onClose }) {
 
                     {/* CREATE BUTTON */}
                     <motion.button
+                    id="CreateBroadcastButton"
                         whileTap={{ scale: 0.95 }}
                         onClick={handleCreate}
                         disabled={loading || selected.length === 0}

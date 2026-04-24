@@ -103,6 +103,7 @@ const templates = {
 export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
   const off = useOnline();
   const { user } = useAuth()
+
   const { socket, channelUnread,chatUnread  } = useSocket();
   const { typingUsers } = useTyping();
   const [active, setActive] = useState(null);
@@ -398,7 +399,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
             <div className="">
             <img className="w-30" src={Logo} alt="" />
           </div>
-          <div onClick={() => navigate('/broadcast')}>
+          <div id="broadcastBtn" onClick={() => navigate('/broadcast')}>
             <button className="font-semibold text-sm bg-blue-400 cursor-pointer px-3 py-1 rounded-xl text-white">Create Broadcast</button>
           </div>
           </div>
@@ -423,6 +424,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
           <span style={{ backgroundColor: Theme.primaryBackgroundColor }} className="px-4 rounded-2xl text-sm font-semibold  border border-blue-500 cursor-pointer">Group</span>
         </div>
         <div
+        id="StartfirstChat"
           className="overflow-y-auto scrollbar scrollbar-thin scrollbar-track-sky-200  scrollbar-thumb-blue-400 max-h-[calc(100vh-130px)] px-2"
           style={{ scrollbarGutter: "stable" }}
         >
@@ -437,6 +439,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
             ) : ''}
             {filteredChatList.map((friend, i) => (
               <motion.div
+              id={`friend-${friend._id}`}
               key={i}
                 layout
                 initial={{ opacity: 0, scale: 0.8, x: -20 }}

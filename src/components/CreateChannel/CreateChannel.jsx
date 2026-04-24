@@ -4,6 +4,7 @@ import People from "/public/people.json";
 import { Theme } from "../../theme/globalTheme";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTour } from "../../context/TourContext";
 
 
 export function CreateChannel({ token }) {
@@ -11,6 +12,7 @@ export function CreateChannel({ token }) {
     const [isWiping, setIsWiping] = useState(false);
     const [friends, setFriends] = useState([]);
     const [image, setImage] = useState(null);
+    const { showTourPrompt, closeTourPrompt, startTourByType, resetSteps, registerStep, startTour } = useTour();
     const [preview, setPreview] = useState(null);
     const [channelName, setChannelName] = useState("");
     const [description, setDescription] = useState("");
@@ -20,6 +22,32 @@ export function CreateChannel({ token }) {
     const [isCreating, setIsCreating] = useState(false);
     //  WIPE TRANSITION
     const navigate = useNavigate();
+
+    useEffect(() => {
+        resetSteps();
+        registerStep({
+            element: "#CreateChannelButton",
+            popover: {
+                title: "Click To button",
+                description: "This will navigate to Channel form.",
+            }
+        })
+        startTour();
+        
+    }, [])
+
+    useEffect(() => {
+        resetSteps();
+        registerStep({
+            element: "#newChannelForm",
+            popover: {
+                title: "Add Details",
+                description: "Enter Channel Name, and a meaning full description.😎",
+            }
+        });
+        startTour();
+    }, [])
+
     const handleCreateStart = () => {
         setIsWiping(true);
 
@@ -208,6 +236,7 @@ export function CreateChannel({ token }) {
                                     </p>
 
                                     <motion.button
+                                        id="CreateChannelButton"
                                         whileTap={{ scale: 0.95 }}
                                         onClick={handleCreateStart}
                                         className="relative overflow-hidden px-8 py-2 rounded-xl text-white font-medium bg-[#26d7a8]"
@@ -221,6 +250,7 @@ export function CreateChannel({ token }) {
                             ) : (
                                 /* ================= FORM ================= */
                                 <motion.div
+                                    id="newChannelForm"
                                     initial={{ opacity: 0, y: 30 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     className="flex flex-col items-center gap-5 w-[350px]"
@@ -314,6 +344,7 @@ export function CreateChannel({ token }) {
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 transition={{ delay: 0.6 }}
+                                id="AlreadyFriends"
                             >
                                 <div className="flex flex-col gap-2">
 
@@ -375,6 +406,7 @@ export function CreateChannel({ token }) {
                                 </div>
                                 <div className="-mt-30">
                                     <motion.button
+                                        id="Addmembers"
                                         whileTap={{ scale: 0.95 }}
                                         onClick={handleAddMembers}
                                         className=" w-full bg-blue-500 text-white py-2 rounded-md font-medium"

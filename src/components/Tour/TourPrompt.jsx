@@ -15,6 +15,7 @@ const handleStart = () => {
   startTourByType("addFriend");
 };
 
+
     return (
         <AnimatePresence>
            {showTourPrompt && (
@@ -33,7 +34,7 @@ const handleStart = () => {
             Take a quick tour?
           </p>
         </div>
-        <div className="flex ">
+        {/* <div className="flex ">
           <button
             onClick={skipTour}
             className="text-xs px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200"
@@ -41,7 +42,7 @@ const handleStart = () => {
             Skip
           </button>
 
-        </div>
+        </div> */}
         </div>
 
        <div className="grid grid-cols-1 gap-2">
@@ -58,17 +59,40 @@ const handleStart = () => {
           </button>
         </div>
 
-         {/* <div className="flex items-baseline gap-2 justify-between">
+          <div className="flex items-baseline gap-2 justify-between">
           <p className="text-xs text-gray-500">
-            Learn How to Broadcast your  message.
+            Learn How to Start Chat with Friends.
           </p>
           <button
-            onClick={handleStart}
+            onClick={() => startTourByType("firstChat")}
             className="text-xs px-3 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600"
           >
             Start
           </button>
         </div>
+          <div className="flex items-baseline gap-2 justify-between">
+         <div className="flex items-center">
+          <span className="text-sm rounded-md font-semibold text-white bg-blue-400 px-1">Create Your First Channel</span>
+         </div>
+          <button
+            onClick={() => startTourByType("firstChannel")}
+            className="text-xs px-3 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600"
+          >
+            Start
+          </button>
+        </div>
+          <div className="flex items-baseline gap-2 justify-between">
+         <div className="flex items-center">
+          <span className="text-sm rounded-md font-semibold text-white bg-blue-400 px-1">Make Your First Broadcast</span>
+         </div>
+          <button
+            onClick={() => startTourByType("broadcast")}
+            className="text-xs px-3 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600"
+          >
+            Start
+          </button>
+        </div>
+         {/* 
 
          <div className="flex items-baseline gap-2 justify-between">
           <p className="text-xs text-gray-500">

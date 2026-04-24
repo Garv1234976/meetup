@@ -39,9 +39,9 @@ const SkeletonCard = ({ i }) => (
   </motion.div>
 );
 
-export function Sidebar_One({ token, openInvite, setOpenInvite,onReset,isChatOpen   }) {
+export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatOpen }) {
   const { user, setUser } = useAuth();
-  const { showTourPrompt, closeTourPrompt, startTourByType,resetSteps,registerStep,startTour } = useTour();
+  const { showTourPrompt, closeTourPrompt, startTourByType, resetSteps, registerStep, startTour } = useTour();
   const [active, setActive] = useState(null);
   const [open, setOpen] = useState(false);
   const { setIsProfile } = useContext(UserContext);
@@ -60,71 +60,71 @@ export function Sidebar_One({ token, openInvite, setOpenInvite,onReset,isChatOpe
   const [inviteSuccess, setInviteSuccess] = useState(false);
   const [inviteError, setInviteError] = useState(false);
   const [copyTick, setCopyTick] = useState(false);
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
 
-    useEffect(() => {
-  const openModalHandler = () => {
-    setOpenInvite(true);
-  };
+  useEffect(() => {
+    const openModalHandler = () => {
+      setOpenInvite(true);
+    };
 
-  window.addEventListener("OPEN_INVITE_MODAL", openModalHandler);
+    window.addEventListener("OPEN_INVITE_MODAL", openModalHandler);
 
-  return () => {
-    window.removeEventListener("OPEN_INVITE_MODAL", openModalHandler);
-  };
-}, []);
+    return () => {
+      window.removeEventListener("OPEN_INVITE_MODAL", openModalHandler);
+    };
+  }, []);
 
-useEffect(() => {
-  if (!openInvite) return;
+  useEffect(() => {
+    if (!openInvite) return;
 
-  resetSteps(); // 🔥 reset for phase 2
+    resetSteps(); // 🔥 reset for phase 2
 
-  registerStep({
-    element: "#inviteFriendModal",
-    popover: {
-      title: "Invite Options",
-      description: "Now I’ll show you how to send friend requests—don’t skip! 😉, Otherwise Your Friend will Lost",
-    },
-  });
+    registerStep({
+      element: "#inviteFriendModal",
+      popover: {
+        title: "Invite Options",
+        description: "Now I’ll show you how to send friend requests—don’t skip! 😉, Otherwise Your Friend will Lost",
+      },
+    });
 
-  registerStep({
-    element: "#scanQrcodetoinvitefriend",
-    popover: {
-      title: "Scan QR",
-      description: "Scan this Qrcode So Your Friends Get Added Instantly.",
-    },
-  });
+    registerStep({
+      element: "#scanQrcodetoinvitefriend",
+      popover: {
+        title: "Scan QR",
+        description: "Scan this Qrcode So Your Friends Get Added Instantly.",
+      },
+    });
 
-  registerStep({
-    element: "#yourinviteid",
-    popover: {
-      title: "Invite ID",
-      description: "Share this ID with your friends",
-    },
-  });
+    registerStep({
+      element: "#yourinviteid",
+      popover: {
+        title: "Invite ID",
+        description: "Share this ID with your friends",
+      },
+    });
 
-  registerStep({
-    element: "#ShareOptions",
-    popover: {
-      title: "Share me",
-      description: "Copy Link aur Share Link via Whatsapp",
-    },
-  });
-  registerStep({
-    element: "#actionbutton",
-    popover: {
-      title: "Enter Code",
-      description: "Paste invite code here",
-    },
-  });
+    registerStep({
+      element: "#ShareOptions",
+      popover: {
+        title: "Share me",
+        description: "Copy Link aur Share Link via Whatsapp",
+      },
+    });
+    registerStep({
+      element: "#actionbutton",
+      popover: {
+        title: "Enter Invite Code",
+        description: "Paste your friend’s invite code here and click 'Add' to connect.",
+      },
+    });
 
-  setTimeout(() => {
-    startTour(); // 🔥 start phase 2
-  }, 200);
+    setTimeout(() => {
+      startTour(); // 🔥 start phase 2
+    }, 200);
 
-}, [openInvite]);
-    
+  }, [openInvite]);
+
 
   function openModal() {
     setIsOpen(true);
@@ -233,7 +233,7 @@ useEffect(() => {
 
   const handleDecline = async (senderId) => {
     try {
-      setOpen(false); 
+      setOpen(false);
 
       await fetch(
         `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${senderId}/decline`,
@@ -297,25 +297,25 @@ useEffect(() => {
 
 
   const copyToClipboard = (link) => {
-  navigator.clipboard
-    .writeText(link)
-    .then(() => {
-      setCopied(link);
-      setAlertVisible(true);
+    navigator.clipboard
+      .writeText(link)
+      .then(() => {
+        setCopied(link);
+        setAlertVisible(true);
 
-      // ✅ show check icon
-      setCopyTick(true);
+        // ✅ show check icon
+        setCopyTick(true);
 
-      // ⏳ revert after 2 sec
-      setTimeout(() => {
-        setCopyTick(false);
-        setAlertVisible(false);
-      }, 2000);
-    })
-    .catch((err) => {
-      console.error("Failed to copy text: ", err);
-    });
-};
+        // ⏳ revert after 2 sec
+        setTimeout(() => {
+          setCopyTick(false);
+          setAlertVisible(false);
+        }, 2000);
+      })
+      .catch((err) => {
+        console.error("Failed to copy text: ", err);
+      });
+  };
 
   const groupedBroadcasts = trackBraodCastData.reduce((acc, item) => {
     const date = new Date(item.createdAt);
@@ -445,14 +445,14 @@ useEffect(() => {
           </div>
           <div className="flex flex-col gap-3 lg:text-xl text-sm">
             {/* <i className="fa-solid fa-hand-point-up"></i> */}
-              
-            <div 
-            id="AddChannel"
+
+            <div
+              id="firstChannel"
               // onClick={openInviteModal}
               onClick={() => {
                 navigate('/channel')
               }}
-              
+
               className="flex flex-col items-center py-2 rounded-md cursor-pointer
                           bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200"
               title="Add Channel"
@@ -462,8 +462,8 @@ useEffect(() => {
                 Channel
               </span>
             </div>
-            <div 
-            id="Home"
+            <div
+              id="Home"
               // onClick={openInviteModal}
               onClick={() => {
                 setIsProfile(false);
@@ -471,13 +471,13 @@ useEffect(() => {
                 setOpenInvite(false);
                 onReset();
               }}
-              
+
               className="flex flex-col items-center py-2 rounded-md cursor-pointer
                           bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200"
               title="Home"
             >
               <i
-              
+
                 className="fa-solid fa-house text-xl"
               ></i>
 
@@ -485,16 +485,16 @@ useEffect(() => {
                 HOME
               </span>
             </div>
-            <div 
-            id="addFriend"
+            <div
+              id="addFriend"
               onClick={openInviteModal}
-              
+
               className="flex flex-col items-center py-2 rounded-md cursor-pointer
                           bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200"
               title="Invite Friends"
             >
               <i
-              
+
                 className="fa-solid fa-user-plus text-xl"
               ></i>
 
@@ -521,7 +521,7 @@ useEffect(() => {
 
 
 
-              
+
             <div
               onClick={() => setOpen(!open)}
               title="Requests"
@@ -537,13 +537,13 @@ useEffect(() => {
                   <i className="fa-regular fa-envelope cursor-pointer text-xl"></i>
                 )}
 
-               {requests.length > 0 &&  <span className="bg-red-600 p-[4px] rounded-full   absolute "></span>}
+                {requests.length > 0 && <span className="bg-red-600 p-[4px] rounded-full   absolute "></span>}
                 <span className="text-[10px] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-all duration-200">REQUESTS</span>
               </div>
-              
-              
+
+
             </div>
-                  {/* {requests.length > 0 && (
+            {/* {requests.length > 0 && (
   <div className="absolute left-20 bottom-[36%] z-50">
     
     
@@ -565,138 +565,138 @@ useEffect(() => {
   </div>
 )} */}
             <AnimatePresence>
-                {open && (
-                  <motion.div
-                    key={JSON.stringify(requests)}
-                    initial={{ opacity: 0, x: -40, scale: 0.8 }}
-                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                    exit={{ opacity: 0, x: -50, scale: 0.8 }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 500,
-                      damping: 20,
-                      mass: 0.6,
-                    }}
-                    className="popup absolute bottom-1/12 rounded-lg left-12 md:left-15 bg-blue-300 z-20 p-2 "
-                  >
-                    <div className="flex">
-                    
+              {open && (
+                <motion.div
+                  key={JSON.stringify(requests)}
+                  initial={{ opacity: 0, x: -40, scale: 0.8 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: -50, scale: 0.8 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 500,
+                    damping: 20,
+                    mass: 0.6,
+                  }}
+                  className="popup absolute bottom-1/12 rounded-lg left-12 md:left-15 bg-blue-300 z-20 p-2 "
+                >
+                  <div className="flex">
+
                     <div>
-                      <div className="flex justify-end py-2 "><i onClick={() => setOpen(!open)}  className="fa-solid fa-xmark bg-red-500 px-2 py-0.5 rounded text-white cursor-pointer" title="close"></i></div>
+                      <div className="flex justify-end py-2 "><i onClick={() => setOpen(!open)} className="fa-solid fa-xmark bg-red-500 px-2 py-0.5 rounded text-white cursor-pointer" title="close"></i></div>
                       <div className="flex  items-center gap-1 justify-between ">
-                      <h3>Friend Requests</h3>
-                      {/* {forSender?.friendRequestsReceived?.length > 0 ? (
+                        <h3>Friend Requests</h3>
+                        {/* {forSender?.friendRequestsReceived?.length > 0 ? (
                         <div className="bg-black w-4 h-4 rounded-full text-white text-[0.6rem]  text-center flex items-center justify-center font-semibold">
                           {requests.length}
                         </div>
                       ) : (
                         ""
                       )} */}
-                      {requests.length > 0 && (<button onClick={handleAcceptAll} className="text-xs bg-blue-500 px-2 rounded-xl font-semibold text-white">accept all</button>)}
-                    </div>
-                    
-                    {requests.length === 0 ? (
-                      <p className="text-xs">No new requests.</p>
-                    ) : (
-                      <AnimatePresence>
-                        <div className="h-56 overflow-y-scroll p-2" style={{ scrollbarWidth: "none" }}>
-                          {/* {[...requests,...requests,...requests,...requests,...requests,...requests,...requests,...requests,...requests,...requests,...requests].map((req) => ( */}
-                          {requests.map((req) => (
-                            <motion.div
-                              layout
-                              initial={{ opacity: 0, scale: 0.8 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.6, x: 50 }}
-                              transition={{ duration: 0.2 }}
-                              key={req._id}
-                              className="request-item flex items-center justify-between mb-2 px-2 py-1 rounded-xl"
-                              style={{ backgroundColor: Theme.thirdBackgroundColor }}
-                            >
-                              <div className="flex items-end gap-2">
-                                <img
-                                  className="w-7 h-7 rounded-full"
-                                  src={req.picture}
-                                  alt={req.name}
-                                />
-                                <p className="text-xs font-semibold uppercase">
-                                  {req.name}
-                                </p>
-                              </div>
-                              <div className="flex flex-col justify-between gap-2 p-1">
-                                <div className="flex gap-3">
-                                  <button
-                                    onClick={() => handleDecline(req._id)}
-                                    className="bg-red-100 p-0.5 rounded-md text-xs cursor-pointer"
-                                  >
-                                    Decline
-                                  </button>
-                                  <button
-                                    onClick={() => handleAccept(req._id)}
-                                    className="bg-amber-300 p-1 rounded-md text-xs cursor-pointer"
-                                  >
-                                    Accept
-                                  </button>
-                                </div>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </div>
-                      </AnimatePresence>
-                    )}
-                    <div className="flex flex-col justify-center items-center mt-2">
-                      <div className="flex items-center gap-2 bg-gray-200  rounded-sm">
-                        <button
-                          className="text-xs font-medium px-1 cursor-pointer"
-                          onClick={() =>
-                            copyToClipboard(
-                              `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${user.inviteNumber}`,
-                            )
-                          }
-                        >
-                          Invite Friend
-                        </button>
-                        <i
-                          onClick={() =>
-                            copyToClipboard(
-                              `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${user.inviteNumber}`,
-                            )
-                          }
-                          className="cursor-pointer fa-solid fa-copy text-white bg-gray-500 p-1  text-xs font-medium rounded-tr-sm rounded-br-sm"
-                        ></i>
-                        {alertVisible && (
-                          <div className="fixed mt-2 top-0 right-0 bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-4 shadow-md flex items-start gap-3 max-w-sm transition-transform ">
-                            <span className="text-blue-500 text-xl">✓</span>
-                            <div className="flex-1">
-                              <p className="font-semibold">
-                                Copied to clipboard!
-                              </p>
-                              <p className="text-sm break-all">{copied}</p>
-                            </div>
-                            <button
-                              className="text-slate-500 hover:text-slate-700 text-lg"
-                              onClick={() => setAlertVisible(false)}
-                            >
-                              ×
-                            </button>
-                          </div>
-                        )}
+                        {requests.length > 0 && (<button onClick={handleAcceptAll} className="text-xs bg-blue-500 px-2 rounded-xl font-semibold text-white">accept all</button>)}
                       </div>
-                      <span className="text-xs underline ">
-                        copy url then Share{" "}
-                      </span>
-                    </div>
-                    </div>
-                    </div>
 
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                      {requests.length === 0 ? (
+                        <p className="text-xs">No new requests.</p>
+                      ) : (
+                        <AnimatePresence>
+                          <div className="h-56 overflow-y-scroll p-2" style={{ scrollbarWidth: "none" }}>
+                            {/* {[...requests,...requests,...requests,...requests,...requests,...requests,...requests,...requests,...requests,...requests,...requests].map((req) => ( */}
+                            {requests.map((req) => (
+                              <motion.div
+                                layout
+                                initial={{ opacity: 0, scale: 0.8 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.6, x: 50 }}
+                                transition={{ duration: 0.2 }}
+                                key={req._id}
+                                className="request-item flex items-center justify-between mb-2 px-2 py-1 rounded-xl"
+                                style={{ backgroundColor: Theme.thirdBackgroundColor }}
+                              >
+                                <div className="flex items-end gap-2">
+                                  <img
+                                    className="w-7 h-7 rounded-full"
+                                    src={req.picture}
+                                    alt={req.name}
+                                  />
+                                  <p className="text-xs font-semibold uppercase">
+                                    {req.name}
+                                  </p>
+                                </div>
+                                <div className="flex flex-col justify-between gap-2 p-1">
+                                  <div className="flex gap-3">
+                                    <button
+                                      onClick={() => handleDecline(req._id)}
+                                      className="bg-red-100 p-0.5 rounded-md text-xs cursor-pointer"
+                                    >
+                                      Decline
+                                    </button>
+                                    <button
+                                      onClick={() => handleAccept(req._id)}
+                                      className="bg-amber-300 p-1 rounded-md text-xs cursor-pointer"
+                                    >
+                                      Accept
+                                    </button>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </div>
+                        </AnimatePresence>
+                      )}
+                      <div className="flex flex-col justify-center items-center mt-2">
+                        <div className="flex items-center gap-2 bg-gray-200  rounded-sm">
+                          <button
+                            className="text-xs font-medium px-1 cursor-pointer"
+                            onClick={() =>
+                              copyToClipboard(
+                                `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${user.inviteNumber}`,
+                              )
+                            }
+                          >
+                            Invite Friend
+                          </button>
+                          <i
+                            onClick={() =>
+                              copyToClipboard(
+                                `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${user.inviteNumber}`,
+                              )
+                            }
+                            className="cursor-pointer fa-solid fa-copy text-white bg-gray-500 p-1  text-xs font-medium rounded-tr-sm rounded-br-sm"
+                          ></i>
+                          {alertVisible && (
+                            <div className="fixed mt-2 top-0 right-0 bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-4 shadow-md flex items-start gap-3 max-w-sm transition-transform ">
+                              <span className="text-blue-500 text-xl">✓</span>
+                              <div className="flex-1">
+                                <p className="font-semibold">
+                                  Copied to clipboard!
+                                </p>
+                                <p className="text-sm break-all">{copied}</p>
+                              </div>
+                              <button
+                                className="text-slate-500 hover:text-slate-700 text-lg"
+                                onClick={() => setAlertVisible(false)}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-xs underline ">
+                          copy url then Share{" "}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             <div onClick={() => setIsProfile(true)} className="flex flex-col items-center py-2 rounded-md cursor-pointer
                           bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200">
               <i
                 className="fa-solid fa-user"
-                
+
               ></i>
               <span className="text-[10px] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-all duration-200">PROFILE</span>
             </div>
@@ -740,7 +740,7 @@ useEffect(() => {
                   onClick={closeBoardCastModal}
                   className="px-3 py-1 rounded-md font-bold cursor-pointer"
                 >
-                                  <i   className="fa-solid fa-xmark bg-red-500 px-3 py-1.5 rounded text-white cursor-pointer" title="close"></i>
+                  <i className="fa-solid fa-xmark bg-red-500 px-3 py-1.5 rounded text-white cursor-pointer" title="close"></i>
 
                 </p>
               </div>
@@ -862,7 +862,7 @@ useEffect(() => {
                 onClick={closeInviteModal}
                 className="absolute top-3 right-3 text-white px-2 rounded-md hover:text-black text-lg"
               >
-                <i   className="fa-solid fa-xmark bg-red-500 px-2 py-0.5 rounded text-white cursor-pointer" title="close"></i>
+                <i className="fa-solid fa-xmark bg-red-500 px-2 py-0.5 rounded text-white cursor-pointer" title="close"></i>
               </button>
 
               {/* TITLE */}
@@ -889,26 +889,26 @@ useEffect(() => {
                 {`${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${user.inviteNumber}`}
               </p> */}
 
-             <div className="flex gap-2" id="yourinviteid">
-              <span>Your Invite ID</span>
-               
-                <div className="flex gap-3 items-center px-2 text-[#333] font-semibold rounded-md" style={{ background: Theme.thirdBackgroundColor }}>
-                <span>{user.inviteNumber}</span>
-                <motion.i
-                key={copyTick ? "check" : "copy"}
-                initial={{ scale: 0.6, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.2 }}
-                className={
-                  copyTick
-                    ? "fa-solid fa-check text-green-600"
-                    : "fa-regular fa-copy cursor-pointer"
-                }
-                onClick={() => !copyTick && copyToClipboard(user.inviteNumber)}
-              />
-              </div>
+              <div className="flex gap-2" id="yourinviteid">
+                <span>Your Invite ID</span>
 
-             </div>
+                <div className="flex gap-3 items-center px-2 text-[#333] font-semibold rounded-md" style={{ background: Theme.thirdBackgroundColor }}>
+                  <span>{user.inviteNumber}</span>
+                  <motion.i
+                    key={copyTick ? "check" : "copy"}
+                    initial={{ scale: 0.6, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.2 }}
+                    className={
+                      copyTick
+                        ? "fa-solid fa-check text-green-600"
+                        : "fa-regular fa-copy cursor-pointer"
+                    }
+                    onClick={() => !copyTick && copyToClipboard(user.inviteNumber)}
+                  />
+                </div>
+
+              </div>
 
               {/* ACTION BUTTONS */}
               <div id="ShareOptions" className="flex gap-3 w-full">
@@ -941,7 +941,7 @@ useEffect(() => {
                   Or enter invite code
                 </p>
 
-                <div  id="actionbutton" className="flex gap-2">
+                <div id="actionbutton" className="flex gap-2">
                   <input
                     type="text"
                     placeholder="Enter 10-digit code"
@@ -990,8 +990,8 @@ useEffect(() => {
         )}
       </AnimatePresence>
       <AnimatePresence>
- 
-</AnimatePresence>
+
+      </AnimatePresence>
     </>
   );
 }
