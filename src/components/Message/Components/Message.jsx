@@ -363,7 +363,7 @@ useEffect(() => {
   return (
     <>
       <div
-        className="w-[100%] h-screen flex flex-col relative"
+        className="w-[100%] h-[100dvh] flex flex-col relative"
         style={{ backgroundColor: Theme.primaryBackgroundColor }}
       >
         {/* Header */}

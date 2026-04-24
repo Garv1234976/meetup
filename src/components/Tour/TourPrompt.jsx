@@ -1,20 +1,19 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { useTour } from "../../context/TourContext";
+import { useEffect } from "react";
 
 export default function TourPrompt() {
-    const { showTourPrompt, closeTourPrompt, startTour,startTourByType } = useTour();
+    const { showTourPrompt, closeTourPrompt, startTour,startTourByType,skipTour,setShowTourPrompt } = useTour();
 
-    
 
-    const skipTour = () => {
-        closeTourPrompt();
-    };
-
-    
-const handleStart = () => {
-  startTourByType("addFriend");
-};
-
+useEffect(() => {
+  const status = localStorage.getItem("tourActive");
+  if (status === "false") {
+    setShowTourPrompt(false);
+  } else {
+    setShowTourPrompt(true);
+  }
+},[])
 
     return (
         <AnimatePresence>
@@ -34,7 +33,7 @@ const handleStart = () => {
             Take a quick tour?
           </p>
         </div>
-        {/* <div className="flex ">
+        <div className="flex ">
           <button
             onClick={skipTour}
             className="text-xs px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200"
@@ -42,7 +41,7 @@ const handleStart = () => {
             Skip
           </button>
 
-        </div> */}
+        </div>
         </div>
 
        <div className="grid grid-cols-1 gap-2">

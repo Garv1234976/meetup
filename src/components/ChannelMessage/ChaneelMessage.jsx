@@ -726,7 +726,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
     <>
       <AnimatePresence>
         <div
-          className="w-[100%] h-screen flex flex-col overflow-hidden"
+          className="w-[100%] h-[100dvh] flex flex-col overflow-hidden"
           style={{ backgroundColor: Theme.primaryBackgroundColor }}
         >
           {/*  HEADER (same as chat) */}

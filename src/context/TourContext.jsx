@@ -14,7 +14,7 @@ export const TourProvider = ({ children }) => {
 
   // ✅ persist state
   useEffect(() => {
-    const status = localStorage.getItem("tourActive");
+    localStorage.setItem("tourActive", "true");
 
 
   }, []);
@@ -32,6 +32,26 @@ export const TourProvider = ({ children }) => {
     localStorage.setItem("tourActive", "false");
 
   };
+
+  const skipTour = () => {
+  console.log("⛔ Tour skipped");
+
+  // 🔥 stop UI immediately
+  destroyTour();
+
+  // 🔥 clear steps
+  resetSteps();
+
+  // 🔥 persist user choice
+  localStorage.setItem("tourActive", "false");
+
+  // 🔥 hide prompt if visible
+  setShowTourPrompt(false);
+
+  // 🔥 reset active state
+  setActiveTour(null);
+};
+
 
   const startTour = () => {
     if (!stepsRef.current.length) return;
@@ -142,27 +162,6 @@ export const TourProvider = ({ children }) => {
     startTour();
   };
 
-  useEffect(() => {
-    const waitForEverything = () => {
-      const status = localStorage.getItem("tourActive");
-
-      if (status === "false") {
-        console.log("⛔ Tour disabled");
-        return;
-      }
-
-      if (stepsRef.current.length === 0) {
-        console.log("⏳ Waiting for steps...");
-        setTimeout(waitForEverything, 100);
-        return;
-      }
-
-      console.log("✅ Steps ready → starting tour");
-      startTour();
-    };
-
-    waitForEverything();
-  }, []);
 
   return (
     <TourContext.Provider
@@ -176,6 +175,8 @@ export const TourProvider = ({ children }) => {
         closeTourPrompt,
         startTourByType,   // ✅ ADD THIS
         activeTour,
+        skipTour,
+        setShowTourPrompt
       }}
     >
       {children}
