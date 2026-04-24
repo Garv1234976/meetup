@@ -25,7 +25,7 @@ const handleStart = () => {
       transition={{ duration: 0.3 }}
       className="fixed  top-0 left-1/2 -translate-x-1/2 z-[9999]"
     >
-       <div className="bg-white shadow-xl border border-gray-200 rounded-xl px-4 py-3 flex flex-col  gap-4">
+       <div className="bg-white w-70 sm:w-full shadow-xl border border-gray-200 rounded-xl px-4 py-3 flex flex-col  gap-4">
         
         <div className="flex items-center  gap-3">
           <div>
