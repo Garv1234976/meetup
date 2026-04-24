@@ -8,8 +8,7 @@ import GroupChat from "../../Group";
 import { QRCode } from "react-qrcode-logo";
 import Logo from "/public/m.svg";
 import { useAuth } from "../../../context/AuthContex";
-import { driver } from "driver.js";
-import "driver.js/dist/driver.css";
+import { useTour } from "../../../context/TourContext";
 
 
 
@@ -42,6 +41,7 @@ const SkeletonCard = ({ i }) => (
 
 export function Sidebar_One({ token, openInvite, setOpenInvite,onReset,isChatOpen   }) {
   const { user, setUser } = useAuth();
+  const { showTourPrompt, closeTourPrompt, startTourByType,resetSteps,registerStep,startTour } = useTour();
   const [active, setActive] = useState(null);
   const [open, setOpen] = useState(false);
   const { setIsProfile } = useContext(UserContext);
@@ -60,70 +60,71 @@ export function Sidebar_One({ token, openInvite, setOpenInvite,onReset,isChatOpe
   const [inviteSuccess, setInviteSuccess] = useState(false);
   const [inviteError, setInviteError] = useState(false);
   const [copyTick, setCopyTick] = useState(false);
-  const [showTourPrompt, setShowTourPrompt] = useState(false);
     const navigate = useNavigate();
 
-  const driverObj = driver({
-  showProgress: true,
-  steps: [
-    {
-      element: '#addFriend',
-      popover: {
-        title: 'Add Friends',
-        description: 'Click here to invite your friends and start chatting together.',
-      },
-    },
-    {
-      element: '#inviteFriendModal',
-      popover: {
-        title: 'Invite Options',
-        description: 'You can invite friends using a QR code, link, or invite ID.',
-      },
-    },
-    {
-      element: '#scanQrcodetoinvitefriend',
-      popover: {
-        title: 'Scan QR Code',
-        description: 'Ask your friend to scan this QR code to connect instantly.',
-      }
-    },
-    {
-      element: '#yourinviteid',
-      popover: {
-        title: 'Your Invite ID',
-        description: 'Share this unique ID with your friend so they can send you a request.',
-      }
-    },
-    {
-      element: '#actionbutton',
-      popover: {
-        title: 'Enter Invite Code',
-        description: 'Paste your friend’s invite code here and click "Add" to connect.',
-      }
-    }
-  ]
-});
-  
-const startTour = () => {
-  setShowTourPrompt(false);
-  driverObj.drive();
-  localStorage.setItem("isaddFriendTourComplete", "true");
-};
 
-const skipTour = () => {
-  setShowTourPrompt(false);
-  localStorage.setItem("isaddFriendTourComplete", "true");
-};
+    useEffect(() => {
+  const openModalHandler = () => {
+    setOpenInvite(true);
+  };
+
+  window.addEventListener("OPEN_INVITE_MODAL", openModalHandler);
+
+  return () => {
+    window.removeEventListener("OPEN_INVITE_MODAL", openModalHandler);
+  };
+}, []);
 
 useEffect(() => {
-  const seen = localStorage.getItem("isaddFriendTourComplete");
+  if (!openInvite) return;
 
-  if (!seen) {
-    setTimeout(() => {
-      setShowTourPrompt(true);
-    }, 800); // slight delay for better UX
-  }
-}, []);
+  resetSteps(); // 🔥 reset for phase 2
+
+  registerStep({
+    element: "#inviteFriendModal",
+    popover: {
+      title: "Invite Options",
+      description: "Now I’ll show you how to send friend requests—don’t skip! 😉, Otherwise Your Friend will Lost",
+    },
+  });
+
+  registerStep({
+    element: "#scanQrcodetoinvitefriend",
+    popover: {
+      title: "Scan QR",
+      description: "Scan this Qrcode So Your Friends Get Added Instantly.",
+    },
+  });
+
+  registerStep({
+    element: "#yourinviteid",
+    popover: {
+      title: "Invite ID",
+      description: "Share this ID with your friends",
+    },
+  });
+
+  registerStep({
+    element: "#ShareOptions",
+    popover: {
+      title: "Share me",
+      description: "Copy Link aur Share Link via Whatsapp",
+    },
+  });
+  registerStep({
+    element: "#actionbutton",
+    popover: {
+      title: "Enter Code",
+      description: "Paste invite code here",
+    },
+  });
+
+  setTimeout(() => {
+    startTour(); // 🔥 start phase 2
+  }, 200);
+
+}, [openInvite]);
+    
 
   function openModal() {
     setIsOpen(true);
@@ -910,7 +911,7 @@ useEffect(() => {
              </div>
 
               {/* ACTION BUTTONS */}
-              <div  className="flex gap-3 w-full">
+              <div id="ShareOptions" className="flex gap-3 w-full">
                 <button
                   onClick={() =>
                     copyToClipboard(
@@ -989,83 +990,7 @@ useEffect(() => {
         )}
       </AnimatePresence>
       <AnimatePresence>
-  {showTourPrompt && (
-    <motion.div
-      initial={{ opacity: 0, y: -40 }}
-      animate={{ opacity: 1, y: 20 }}
-      exit={{ opacity: 0, y: -40 }}
-      transition={{ duration: 0.3 }}
-      className="fixed  top-0 left-1/2 -translate-x-1/2 z-[9999]"
-    >
-       <div className="bg-white shadow-xl border border-gray-200 rounded-xl px-4 py-3 flex flex-col  gap-4">
-        
-        <div className="flex items-center  gap-3">
-          <div>
-          <p className="text-sm font-semibold text-gray-800">
-            Take a quick tour?
-          </p>
-        </div>
-        <div className="flex ">
-          <button
-            onClick={skipTour}
-            className="text-xs px-3 py-1 rounded-md bg-gray-100 hover:bg-gray-200"
-          >
-            Skip
-          </button>
-
-        </div>
-        </div>
-
-       <div className="grid grid-cols-1 gap-2">
-
-         <div className="flex items-baseline gap-2">
-          <p className="text-xs text-gray-500">
-            Learn how to add friends and use features.
-          </p>
-          <button
-            onClick={startTour}
-            className="text-xs px-3 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600"
-          >
-            Start
-          </button>
-        </div>
-
-         {/* <div className="flex items-baseline gap-2 justify-between">
-          <p className="text-xs text-gray-500">
-            Learn How to Broadcast your  message.
-          </p>
-          <button
-            onClick={startTour}
-            className="text-xs px-3 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600"
-          >
-            Start
-          </button>
-        </div>
-
-         <div className="flex items-baseline gap-2 justify-between">
-          <p className="text-xs text-gray-500">
-            Learn How to Create Channel.
-          </p>
-          <button
-            onClick={startTour}
-            className="text-xs px-3 py-1 rounded-md bg-blue-500 text-white hover:bg-blue-600"
-          >
-            Start
-          </button>
-        </div> */}
-        
-
-       </div>
-      {/* <div className="flex items-center justify-between px-2 font-semibold text-xs">
-          <span>
-          Complete
-        </span>
-        <span>1/3</span>
-      </div> */}
-      </div>
-    
-    </motion.div>
-  )}
+ 
 </AnimatePresence>
     </>
   );

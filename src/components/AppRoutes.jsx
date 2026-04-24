@@ -11,6 +11,7 @@ import { RoomJoin } from "./VideoCall/RoomJoin";
 import BroadcastChannelCreator from "./Broadcast/BroadcastChannelCreator";
 import JoinChannelOverview from './Join/JoinChannelOverview';
 import FriendInvitation from "./Join/FriendInvitation";
+import TourPrompt from "./Tour/TourPrompt";
 export default function AppRoutes({ clientId }) {
   return (
     <Routes>
@@ -20,6 +21,7 @@ export default function AppRoutes({ clientId }) {
         element={
           <ProtectedRoute>
             <MainApp />
+            <TourPrompt />
           </ProtectedRoute>
         }
       />

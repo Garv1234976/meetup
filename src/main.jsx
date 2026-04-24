@@ -10,11 +10,12 @@ import AppRoutes from "./components/AppRoutes.jsx";
 import { Provider } from "react-redux";
 import { store } from "./redux/store.js";
 import { SocketProvider } from "./context/SocketContext.jsx";
+import { TourProvider } from "./context/TourContext.jsx";
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-console.log("Google Client ID:", clientId);
-if (!clientId) {
-  console.error("Google Client ID is missing!");
-}
+// console.log("Google Client ID:", clientId);
+// if (!clientId) {
+//   console.error("Google Client ID is missing!");
+// }
 // const fbId = import.meta.env.VITE_FB_APP_ID;
 // console.log("Google Client ID:", fbId);
 // if (!fbId) {
@@ -25,7 +26,9 @@ createRoot(document.getElementById("root")).render(
     <BrowserRouter>
       <AuthProvider>
         <SocketProvider>
-        <AppRoutes clientId={clientId} />
+          <TourProvider>
+          <AppRoutes clientId={clientId} />
+          </TourProvider>
         </SocketProvider>
       </AuthProvider>
     </BrowserRouter>
