@@ -12,6 +12,7 @@ import BroadcastChannelCreator from "./Broadcast/BroadcastChannelCreator";
 import JoinChannelOverview from './Join/JoinChannelOverview';
 import FriendInvitation from "./Join/FriendInvitation";
 import TourPrompt from "./Tour/TourPrompt";
+import { GetAllNotification } from "./Notification/GetAllNotification";
 export default function AppRoutes({ clientId }) {
   return (
     <Routes>
@@ -70,6 +71,14 @@ export default function AppRoutes({ clientId }) {
         element={
           <ProtectedRoute>
             <FriendInvitation />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/notification"
+        element={
+          <ProtectedRoute>
+            <GetAllNotification />
           </ProtectedRoute>
         }
       />

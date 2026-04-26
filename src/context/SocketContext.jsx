@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { io } from "socket.io-client";
 import { useAuth } from "./AuthContex";
 import { useRef } from "react";
+import { saveNotification } from "../../utils/saveNotification";
 
 const SOCKET_URL = import.meta.env.VITE_BACK_DEV_API;
 
@@ -203,6 +204,71 @@ export function SocketProvider({ children }) {
     };
   });
 
+});
+
+newSocket.on("friend_request_accepted", async (data) => {
+  console.log("🔥 ACCEPT EVENT:", data);
+
+  // 🔥 save in IndexedDB
+  await saveNotification({
+    ...data,
+    uniqueId: `accept_${data.user._id}`, // prevent duplicate
+    isRead: false,
+  });
+
+  // 🔥 trigger UI
+  window.dispatchEvent(
+    new CustomEvent("friend-accepted", {
+      detail: data,
+    })
+  );
+
+  const { user, type, chatId } = data;
+  if (type === "accepted_by_other") {
+    // 🔥 create sidebar-ready object
+    const newFriend = {
+      ...user,
+      isChannel: false,
+      lastMessageAt: new Date().toISOString(),
+      chatId,
+    };
+
+    // 🔥 dispatch to Sidebar2
+    window.dispatchEvent(
+      new CustomEvent("friend-added", {
+        detail: newFriend,
+      })
+    );
+  }
+});
+
+newSocket.on("friend_request_declined", async (data) => {
+  const myId = userRef.current?._id;
+
+  // 🔥 ONLY SAVE IF EVENT IS FOR ME
+  if (data?.user?._id === myId) return;
+
+  await saveNotification(data);
+
+  window.dispatchEvent(
+    new CustomEvent("friend-declined", {
+      detail: data,
+    })
+  );
+});
+
+
+newSocket.on("new_message_notification", ({ chatId, from }) => {
+  const activeChatId = activeChatRef.current;
+
+  // ❌ user is inside same chat → ignore
+  if (String(activeChatId) === String(chatId)) return;
+
+  // 🔥 increase unread
+  setChatUnread((prev) => ({
+    ...prev,
+    [chatId]: (prev[chatId] || 0) + 1,
+  }));
 });
 
     return () => {

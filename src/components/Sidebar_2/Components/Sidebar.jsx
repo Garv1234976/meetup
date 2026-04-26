@@ -100,11 +100,11 @@ const templates = {
   `,
 };
 
-export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
+export function Sidebar_Two({ token, setOpenInvite, resetKey, setIsChatOpen }) {
   const off = useOnline();
   const { user } = useAuth()
 
-  const { socket, channelUnread,chatUnread  } = useSocket();
+  const { socket, channelUnread, chatUnread } = useSocket();
   const { typingUsers } = useTyping();
   const [active, setActive] = useState(null);
   const [selectedFriend, setSelectedFriend] = useState(null);
@@ -127,6 +127,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [friendsOnly, setFriendsOnly] = useState([]);
   const [noFriendModal, setNoFriendModal] = useState(false);
+  const [activeFilter, setActiveFilter] = useState("all");
   const navigate = useNavigate()
   const location = useLocation();
 
@@ -365,20 +366,31 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
     );
   }
 
-  const filteredChatList = friends.filter((f) => {
-    const text = searchTerm.toLowerCase();
+  const filteredChatList = friends
+    .filter((f) => {
+      const text = searchTerm.toLowerCase();
 
-    return (
-      f.name?.toLowerCase().includes(text) ||
-      f.email?.toLowerCase().includes(text)
-    );
-  });
+      return (
+        f.name?.toLowerCase().includes(text) ||
+        f.email?.toLowerCase().includes(text)
+      );
+    })
+    .filter((f) => {
+      if (activeFilter === "all") return true;
+
+      if (activeFilter === "group") {
+        return f.isChannel === true; // 🔥 only channels
+      }
+
+      return true;
+    });
+
   return (
     <>
       <div
         className={`${selectedFriend || selectedChannel
-            ? "hidden md:block"
-            : "block"
+          ? "hidden md:block"
+          : "block"
           } w-full md:w-[33%]`}
         style={{ backgroundColor: Theme.secondaryBackgroundColor }}
       >
@@ -392,17 +404,17 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
             {/* <i className="fa-solid fa-tower-broadcast"></i> */}
           </div>
 
-          
-          
+
+
         </div>
-          <div className="md:hidden flex items-center justify-between px-3 py-2">
-            <div className="">
+        <div className="md:hidden flex items-center justify-between px-3 py-2">
+          <div className="">
             <img className="w-30" src={Logo} alt="" />
           </div>
           <div id="broadcastBtn" onClick={() => navigate('/broadcast')}>
             <button className="font-semibold text-sm bg-blue-400 cursor-pointer px-3 py-1 rounded-xl text-white">Create Broadcast</button>
           </div>
-          </div>
+        </div>
         <div className="flex justify-center px-4  items-center gap-1">
           <input
             value={searchTerm}
@@ -420,76 +432,91 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
           </div>
         </div>
         <div className="flex gap-5 px-4 mb-2 mt-1 items-center">
-          <span style={{ backgroundColor: Theme.primaryBackgroundColor }} className="px-4 rounded-2xl text-sm font-semibold  border border-blue-500 cursor-pointer">All</span>
-          <span style={{ backgroundColor: Theme.primaryBackgroundColor }} className="px-4 rounded-2xl text-sm font-semibold  border border-blue-500 cursor-pointer">Group</span>
+          <span
+            onClick={() => setActiveFilter("all")}
+            style={{ backgroundColor: Theme.primaryBackgroundColor }}
+            className={`px-4 rounded-2xl text-sm font-semibold border border-blue-500 cursor-pointer ${activeFilter === "all" ? "bg-blue-500 text-white" : ""
+              }`}
+          >
+            All
+          </span>
+
+          <span
+            onClick={() => setActiveFilter("group")}
+            style={{ backgroundColor: Theme.primaryBackgroundColor }}
+            className={`px-4 rounded-2xl text-sm font-semibold border border-blue-500 cursor-pointer ${activeFilter === "group" ? "bg-blue-500 text-white" : ""
+              }`}
+          >
+            Group
+          </span>
         </div>
         <div
-        id="StartfirstChat"
+          id="StartfirstChat"
           className="overflow-y-auto scrollbar scrollbar-thin scrollbar-track-sky-200  scrollbar-thumb-blue-400 max-h-[calc(100vh-130px)] px-2"
           style={{ scrollbarGutter: "stable" }}
         >
           {/* <AnimatePresence> */}
-            {filteredChatList.length === 0 ? (
-              <div className="flex items-center justify-center py-3 ">
-                <div onClick={() => setOpenInvite(true)} className="bg-blue-500 flex items-end gap-5 px-3 py-1 rounded-md mt-50 cursor-pointer">
-                  <i className="fa-solid fa-person-circle-plus text-xl text-white"></i>
-                  <span className="flex text-white text-sm font-semibold">Add Friend</span>
-                </div>
+          {filteredChatList.length === 0 ? (
+            <div className="flex items-center justify-center py-3 ">
+              <div onClick={() => setOpenInvite(true)} className="bg-blue-500 flex items-end gap-5 px-3 py-1 rounded-md mt-50 cursor-pointer">
+                <i className="fa-solid fa-person-circle-plus text-xl text-white"></i>
+                <span className="flex text-white text-sm font-semibold">Add Friend</span>
               </div>
-            ) : ''}
-            {filteredChatList.map((friend, i) => (
-              <motion.div
+            </div>
+          ) : ''}
+          {filteredChatList.map((friend, i) => (
+            <motion.div
               id={`friend-${friend._id}`}
               key={i}
-                layout
-                initial={{ opacity: 0, scale: 0.8, x: -20 }}
-                animate={{
-                  opacity: 1,
-                  scale: 1,
-                  x: 0,
-                  backgroundColor:
-                    selectedFriend?._id === friend._id ||
-                      selectedChannel?._id === friend._id
-                      ? "#e5e7eb"
-                      : Theme.onchat.active,
-                }}
-                whileHover={{ backgroundColor: "#e5e7eb", scale: 1.02 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 400,
-                  damping: 25,
-                }}
-                onClick={() => {
-                  if (friend.isChannel) {
-                    handleChannelClick(friend);
-                  } else {
-                    handleFriendClick(friend);
-                  }
-                }}
-                className="px-5 py-2 flex items-start justify-between mb-1 rounded-sm cursor-pointer"
-              >
-                <div className="flex gap-2 ">
-                  {friend.isBroadcast === true ? (
-                    <div className="w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center">
-                      <i className="fa-solid fa-tower-cell text-xl text-white"></i>
-                    </div>
-                  ) : (
-                    <img
-                      className="w-10 h-10 rounded-full mix-blend-multiply object-contain"
-                      src={friend.picture || MeetUplogo}
-                      alt={`profile picture of ${friend.name}`}
-                    />
-                  )}
-                  <div className="flex flex-col">
-                    <span>{friend.name}</span>
-                    {/* {console.log(friend)} */}
-                    {/* {friend._id && typingUsers[friend._id] ? <p>typing ..</p> : lastMessages[friend._id]?.text.length > 14 ? <span>{lastMessages[friend._id]?.text.slice(0, 14)}...</span> : <span>{lastMessages[friend._id]?.text}</span> || lstMsgByMe
+              layout
+              initial={{ opacity: 0, scale: 0.8, x: -20 }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                x: 0,
+                backgroundColor:
+                  selectedFriend?._id === friend._id ||
+                    selectedChannel?._id === friend._id
+                    ? "#e5e7eb"
+                    : Theme.onchat.active,
+              }}
+              whileHover={{ backgroundColor: "#e5e7eb", scale: 1.02 }}
+              transition={{
+                type: "spring",
+                stiffness: 400,
+                damping: 25,
+              }}
+              onClick={() => {
+                if (friend.isChannel) {
+                  handleChannelClick(friend);
+                } else {
+                  handleFriendClick(friend);
+                }
+              }}
+              className="px-5 py-2 flex items-start justify-between mb-1 rounded-sm cursor-pointer"
+            >
+              <div className="flex gap-2 ">
+                {friend.isBroadcast === true ? (
+                  <div className="w-10 h-10 bg-blue-400 rounded-full flex items-center justify-center">
+                    <i className="fa-solid fa-tower-cell text-xl text-white"></i>
+                  </div>
+                ) : (
+                  <img
+                    className="w-10 h-10 rounded-full mix-blend-multiply object-contain"
+                    src={friend.picture || MeetUplogo}
+                    alt={`profile picture of ${friend.name}`}
+                  />
+                )}
+                <div className="flex flex-col">
+                  <span>{friend.name}</span>
+                  {/* {console.log(friend)} */}
+                  {/* {friend._id && typingUsers[friend._id] ? <p>typing ..</p> : lastMessages[friend._id]?.text.length > 14 ? <span>{lastMessages[friend._id]?.text.slice(0, 14)}...</span> : <span>{lastMessages[friend._id]?.text}</span> || lstMsgByMe
                 
                 } */}
-                    {friend._id && typingUsers[friend._id] && (
-                      <p>typing ..</p>
-                    )}
-                    {/* {friend._id && typingUsers[friend._id] ? (
+                  {friend._id && typingUsers[friend._id] && (
+                    <p>typing ..</p>
+                  )}
+                  {/* {friend._id && typingUsers[friend._id] ? (
                       <p>typing ..</p>
                     ) : lastMessages[friend._id]?.text ? (
                       <span>
@@ -506,47 +533,58 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
                     ) : (
                       <span>No messages yet</span>
                     )} */}
-                  </div>
+                </div>
 
-                </div>
-                <div className="flex items-center flex-col">
-                  <span>
-                    {friend.lastMessageAt
-                      ? new Date(friend.lastMessageAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })
-                      : ""}
+              </div>
+              <div className="flex items-center flex-col">
+                <span>
+                  {friend.lastMessageAt
+                    ? new Date(friend.lastMessageAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                    : ""}
+                </span>
+                <span >
+                  {friend.isChannel &&
+                    String(friend.creator) !== String(user._id) && //  hide for creator
+                    channelUnread[friend._id] > 0 && (
+                      <span className="bg-blue-500 text-white text-xs px-2 font-semibold rounded-full ">
+                        {channelUnread[friend._id] > 99 ? "99+" : channelUnread[friend._id]}
+                      </span>
+                    )}
+
+                </span>
+                <span></span>
+                {/* {!friend.isChannel && chatUnread?.[friend._id] > 0 && (
+  <span className="bg-red-500 text-white text-xs px-2 font-semibold rounded-full mt-1">
+    {chatUnread?.[friend._id] > 99 ? "99+" : chatUnread?.[friend._id]}
+  </span>
+)} */}
+                {!friend.isChannel && chatUnread?.[friend.chatId] || 0 > 0 && (
+                  <span className="bg-red-500 text-white text-xs px-2 font-semibold rounded-full mt-1">
+                    {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
-                  <span >
-                    {friend.isChannel &&
-                      String(friend.creator) !== String(user._id) && //  hide for creator
-                      channelUnread[friend._id] > 0 && (
-                        <span className="bg-blue-500 text-white text-xs px-2 font-semibold rounded-full ">
-                          {channelUnread[friend._id] > 99 ? "99+" : channelUnread[friend._id]}
-                        </span>
-                      )}
-                      
-                  </span>
-                </div>
-              </motion.div>
-            ))}
+                )}
+              </div>
+            </motion.div>
+          ))}
           {/* </AnimatePresence> */}
         </div>
       </div>
 
       <div
         className={`${selectedFriend || selectedChannel
-            ? "block w-full md:w-[65%]"
-            : "hidden md:flex w-[65%]"
+          ? "block w-full md:w-[65%]"
+          : "hidden md:flex w-[65%]"
           }`}
       >
         {selectedChannel ? (
-          <ChannelMessage channelid={selectedChannel._id} fullchannelobject={selectedChannel} onBack={() => { setSelectedChannel(null); setSelectedFriend(null);setIsChatOpen(false); }} />
+          <ChannelMessage channelid={selectedChannel._id} fullchannelobject={selectedChannel} onBack={() => { setSelectedChannel(null); setSelectedFriend(null); setIsChatOpen(false); }} />
         ) : selectedFriend ? (
           <Messaging
             slectedFriends={selectedFriend}
-            onBack={() => { setSelectedFriend(null); setSelectedChannel(null);setIsChatOpen(false); }}
+            onBack={() => { setSelectedFriend(null); setSelectedChannel(null); setIsChatOpen(false); }}
           />
         ) : (
           <div
@@ -571,10 +609,10 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey,setIsChatOpen  }) {
                   // onClick={openModal}
                   onClick={() => {
                     if (friendsOnly.length === 0) {
-                    setNoFriendModal(true);
-                  } else {
-                    navigate("/broadcast");
-                  }
+                      setNoFriendModal(true);
+                    } else {
+                      navigate("/broadcast");
+                    }
                   }}
                 >
                   <span className="relative">BroadCast</span>

@@ -9,8 +9,20 @@ import { QRCode } from "react-qrcode-logo";
 import Logo from "/public/m.svg";
 import { useAuth } from "../../../context/AuthContex";
 import { useTour } from "../../../context/TourContext";
+import { openDB } from "../../../../utils/indexedDB";
 
+function generateInviteLink(user) {
+  const payload = {
+    code: user.inviteNumber,
+    exp: Date.now() + 60 * 60 * 1000, 
+    // exp: Date.now() + 6 * 1000, // for test 6 sec
+    secret: "monkey123", 
+  };
 
+  const encoded = btoa(JSON.stringify(payload));
+
+  return `https://merchantcoin.shop/friend-invitation?invitecode=${encoded}`;
+}
 
 
 const SkeletonCard = ({ i }) => (
@@ -60,6 +72,9 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
   const [inviteSuccess, setInviteSuccess] = useState(false);
   const [inviteError, setInviteError] = useState(false);
   const [copyTick, setCopyTick] = useState(false);
+
+  const [hasNotification, setHasNotification] = useState(false);
+  const [tooltip, setTooltip] = useState(null);
   const navigate = useNavigate();
 
 
@@ -125,6 +140,71 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
 
   }, [openInvite]);
 
+  useEffect(() => {
+    async function checkUnread() {
+      const db = await openDB();
+
+      const tx = db.transaction("notifications", "readonly");
+      const store = tx.objectStore("notifications");
+
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        const data = request.result || [];
+
+        // 🔥 check unread
+        const hasUnread = data.some((n) => !n.isRead);
+
+        setHasNotification(hasUnread);
+      };
+    }
+
+    checkUnread();
+  }, []);
+
+
+  useEffect(() => {
+    const handler = (e) => {
+      const { type, user } = e.detail;
+
+      // 🔥 ONLY for new friend added (user1 case)
+      if (type === "accepted_by_other") {
+        setHasNotification(true);
+        setTooltip({
+          name: user?.name,
+          picture: user?.picture,
+        });
+
+        // auto hide after 3 sec
+        setTimeout(() => {
+          setTooltip(null);
+        }, 4000);
+
+      }
+    };
+
+    window.addEventListener("friend-accepted", handler);
+
+    return () =>
+      window.removeEventListener("friend-accepted", handler);
+  }, []);
+
+
+  useEffect(() => {
+    const handler = (e) => {
+      const { type } = e.detail;
+
+      // 🔥 only blink when someone declines YOUR request
+      if (type === "declined_by_other") {
+        setHasNotification(true);
+      }
+    };
+
+    window.addEventListener("friend-declined", handler);
+
+    return () =>
+      window.removeEventListener("friend-declined", handler);
+  }, []);
 
   function openModal() {
     setIsOpen(true);
@@ -445,22 +525,76 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
           </div>
           <div className="flex flex-col gap-3 lg:text-xl text-sm">
             {/* <i className="fa-solid fa-hand-point-up"></i> */}
+            <div className="relative flex items-center">
 
-            <div
-              id="firstChannel"
-              // onClick={openInviteModal}
-              onClick={() => {
-                navigate('/channel')
-              }}
+              {/* 🔔 Bell */}
+              <div
+                id="Notification"
+                onClick={async () => {
+                  setHasNotification(false);
 
-              className="flex flex-col items-center py-2 rounded-md cursor-pointer
-                          bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200"
-              title="Add Channel"
-            >
-              <i className="fa-solid fa-square-rss text-2xl"></i>
-              <span className="text-[10px] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                Channel
-              </span>
+                  const db = await openDB();
+                  const tx = db.transaction("notifications", "readwrite");
+                  const store = tx.objectStore("notifications");
+
+                  const request = store.getAll();
+
+                  request.onsuccess = () => {
+                    const data = request.result || [];
+
+                    data.forEach((item) => {
+                      item.isRead = true;
+                      store.put(item);
+                    });
+                  };
+
+                  navigate("/notification");
+                }}
+                className="relative flex flex-col items-center py-2 rounded-md cursor-pointer
+               bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200"
+              >
+                <i className="fa-solid fa-bell text-2xl"></i>
+
+                {/* 🔴 BLINKER */}
+                {hasNotification && (
+                  <>
+                    <span className="absolute top-1 right-3 w-2 h-2 bg-red-600 rounded-full animate-ping"></span>
+                    <span className="absolute top-1 right-3 w-2 h-2 bg-red-600 rounded-full"></span>
+                  </>
+                )}
+
+                <span className="text-[10px] font-bold mt-1 opacity-0 group-hover:opacity-100">
+                  Notification
+                </span>
+              </div>
+
+              {/* 🔥 TOOLTIP RIGHT SIDE */}
+              <AnimatePresence>
+                {tooltip && (
+                  <motion.div
+                    initial={{ opacity: 0, x: 20, scale: 0.9 }}
+                    animate={{ opacity: 1, x: 0, scale: 1 }}
+                    exit={{ opacity: 0, x: 20, scale: 0.9 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                    className="absolute left-full ml-2 w-66 top-1/3 -translate-y-1/2 
+                   bg-gray-400 text-white px-4 py-2 rounded-lg shadow-lg 
+                   flex items-center gap-2 whitespace-nowrap"
+                  >
+                    {/* Avatar */}
+                    <img
+                      src={tooltip.picture || "/m.svg"}
+                      onError={(e) => (e.target.src = "/m.svg")}
+                      className="w-7 h-7 rounded-full object-contain"
+                    />
+
+                    {/* Text */}
+                    <span className="text-sm font-medium">
+                      {tooltip.name} accepted your request
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
             </div>
             <div
               id="Home"
@@ -485,6 +619,23 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
                 HOME
               </span>
             </div>
+            <div
+              id="firstChannel"
+              // onClick={openInviteModal}
+              onClick={() => {
+                navigate('/channel')
+              }}
+
+              className="flex flex-col items-center py-2 rounded-md cursor-pointer
+                          bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200"
+              title="Add Channel"
+            >
+              <i className="fa-solid fa-square-rss text-2xl"></i>
+              <span className="text-[10px] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                Channel
+              </span>
+            </div>
+
             <div
               id="addFriend"
               onClick={openInviteModal}
@@ -873,7 +1024,7 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
               {/* QR BOX */}
               <div id="scanQrcodetoinvitefriend" className="bg-white p-3 rounded-xl shadow-inner border border-gray-200">
                 <QRCode
-                  value={`https://merchantcoin.shop/friend-invitation?invitecode=${user.inviteNumber}`}
+                  value={`${generateInviteLink(user)}`}
                   logoImage={Logo}
                   logoWidth={35}
                   logoHeight={25}
@@ -915,7 +1066,7 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
                 <button
                   onClick={() =>
                     copyToClipboard(
-                      `https://merchantcoin.shop/friend-invitation?invitecode=${user.inviteNumber}`,
+                      `${generateInviteLink(user)}`,
                     )
                   }
                   className="flex-1 bg-gray-200 hover:bg-gray-300 text-xs py-2 rounded-md"
@@ -928,7 +1079,7 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
                     navigator.share?.({
                       title: "Join me on chat",
                       text: "Join me on chat",
-                      url: `https://merchantcoin.shop/friend-invitation?invitecode=${user.inviteNumber}`,
+                      url: `${generateInviteLink(user)}`,
                     })
                   }
                   className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-xs py-2 rounded-md"

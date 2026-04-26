@@ -9,6 +9,20 @@ import { useNavigate } from "react-router-dom";
 
 import { createClient } from "@supabase/supabase-js";
 
+function generateInviteLink(channel) {
+  const payload = {
+    code: channel.inviteCode,
+    exp: Date.now() + 60 * 60 * 1000, 
+    // exp: Date.now() + 6 * 1000, // for test 6 sec
+    secret: "monkey123", 
+  };
+
+  const encoded = btoa(JSON.stringify(payload));
+
+  return `https://merchantcoin.shop/join?channelInvitecode=${encoded}`;
+}
+
+
 const supabase = createClient(
   'https://ywehlxverbpaavdxoxcd.supabase.co',
   'sb_publishable_SGALij1Ival2DdhZ3xjmXA_khrEOMpp'
@@ -783,7 +797,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
               {BroadCastChannel === true ? "" : (
                 <div
                   onClick={() => {
-                    const link = `https://merchantcoin.shop/join?channelInvitecode=${channel.inviteCode}`;
+                    const link = `${generateInviteLink(channel)}`;
                     navigator.clipboard.writeText(link);
 
                     // alert("Invite link copied!");
@@ -1859,7 +1873,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
             {/* COPY */}
             <div
               onClick={() => {
-                const link = `https://merchantcoin.shop/join?channelInvitecode=${channel.inviteCode}`;
+                const link = `${generateInviteLink(channel)}`;
                 navigator.clipboard.writeText(link);
                 setShowShareMenu(false);
               }}
@@ -1872,7 +1886,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
             {/* SHARE */}
             <div
               onClick={() => {
-                const link = `https://merchantcoin.shop/join?channelInvitecode=${channel.inviteCode}`;
+                const link = `${generateInviteLink(channel)}`;
                 const message = `Join my channel 🚀\n${link}`;
 
                 if (navigator.share) {

@@ -113,6 +113,15 @@ useEffect(() => {
 useEffect(() => {
   if (!slectedFriends?.chatId) return;
 
+  setChatUnread((prev) => ({
+    ...prev,
+    [slectedFriends.chatId]: 0,
+  }));
+}, [slectedFriends?.chatId]);
+
+useEffect(() => {
+  if (!slectedFriends?.chatId) return;
+
   setActiveChat(slectedFriends.chatId);
 
   return () => setActiveChat(null);
