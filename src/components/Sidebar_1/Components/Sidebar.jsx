@@ -1156,25 +1156,26 @@ See you on Meetup! 🚀
               {/* ACTION BUTTONS */}
               <div id="ShareOptions" className="flex gap-3 w-full">
                 <button
-                  // onClick={() =>
-                  //   copyToClipboard(
-                  //     `${generateInviteLink(user)}`,
-                  //   )
-                  // }
-                  onClick={() => handleShareQR()}
+                  onClick={() =>
+                    copyToClipboard(
+                      `${generateInviteLink(user)}`,
+                    )
+                  }
+                  
                   className="flex-1 bg-gray-200 hover:bg-gray-300 text-xs py-2 rounded-md"
                 >
                   Copy Link
                 </button>
 
                 <button
-                  onClick={() =>
-                    navigator.share?.({
-                      title: "Join me on chat",
-                      text: "Join me on chat",
-                      url: `${generateInviteLink(user)}`,
-                    })
-                  }
+                  // onClick={() =>
+                  //   navigator.share?.({
+                  //     title: "Join me on chat",
+                  //     text: "Join me on chat",
+                  //     url: `${generateInviteLink(user)}`,
+                  //   })
+                  // }
+                  onClick={() => handleShareQR()}
                   className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-xs py-2 rounded-md"
                 >
                   Share
