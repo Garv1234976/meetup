@@ -10,6 +10,7 @@ import Logo from "/public/m.svg";
 import { useAuth } from "../../../context/AuthContex";
 import { useTour } from "../../../context/TourContext";
 import { openDB } from "../../../../utils/indexedDB";
+import html2canvas from "html2canvas";
 
 function generateInviteLink(user) {
   const payload = {
@@ -76,7 +77,7 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
   const [hasNotification, setHasNotification] = useState(false);
   const [tooltip, setTooltip] = useState(null);
   const [sendRequest, setSendRequest] = useState(null);
-
+  const qrRef = useRef(null);
   const navigate = useNavigate();
 
 
@@ -503,6 +504,45 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
   return () =>
     window.removeEventListener("friend-request-received", handler);
 }, []);
+
+const handleShareQR = async () => {
+  try {
+    const canvas = await html2canvas(qrRef.current);
+    const blob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/png")
+    );
+
+    const file = new File([blob], "invite-qr.png", {
+      type: "image/png",
+    });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        title: `${user.name} is on Meetup 👋`,
+
+text: `
+Hey! 😊
+
+I'm on *Meetup* — come join me and let's connect as friends 💬
+
+🔗 Tap to connect with me:
+${generateInviteLink(user)}
+
+📷 Or scan the QR code to join instantly
+
+⏳ This invite expires in 1 hour
+
+See you on Meetup! 🚀
+`,
+        files: [file], // ✅ QR IMAGE
+      });
+    } else {
+      alert("Sharing not supported on this device");
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
   return (
     <>
       <div
@@ -1060,7 +1100,12 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
               {/* QR BOX */}
               <div
                 id="scanQrcodetoinvitefriend"
-                className="bg-white p-3 rounded-xl shadow-inner border border-gray-200"
+                ref={qrRef}
+                    style={{
+                    backgroundColor: "#ffffff",
+                    color: "#000000",
+                  }}
+                // className="bg-white p-3 rounded-xl shadow-inner border border-gray-200"
               >
                 <a
                   href={generateInviteLink(user)}
@@ -1069,7 +1114,7 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
                 >
                   <QRCode
                     value={generateInviteLink(user)}
-                    logoImage={Logo}
+                    logoImage={user.picture || Logo}
                     logoWidth={35}
                     logoHeight={25}
                     logoPadding={2}
@@ -1111,11 +1156,12 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
               {/* ACTION BUTTONS */}
               <div id="ShareOptions" className="flex gap-3 w-full">
                 <button
-                  onClick={() =>
-                    copyToClipboard(
-                      `${generateInviteLink(user)}`,
-                    )
-                  }
+                  // onClick={() =>
+                  //   copyToClipboard(
+                  //     `${generateInviteLink(user)}`,
+                  //   )
+                  // }
+                  onClick={() => handleShareQR()}
                   className="flex-1 bg-gray-200 hover:bg-gray-300 text-xs py-2 rounded-md"
                 >
                   Copy Link
