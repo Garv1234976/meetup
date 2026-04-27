@@ -753,7 +753,18 @@ const handleShareQR = async (channelname) => {
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({
         title: `Join *${channelname}* channel`,
-        text: "Scan this QR or use the link",
+       text: `
+📢 You're invited to join *${channelname}*
+
+🔗 Join instantly using this link:
+${generateInviteLink(channel)}
+
+📷 Or simply scan the QR code to join
+
+⏳ Note: This invite link expires in 1 hour
+
+See you inside! 🚀
+`,
         files: [file], // ✅ QR IMAGE
       });
     } else {
@@ -1571,9 +1582,9 @@ const handleShareQR = async (channelname) => {
                     id=""
                     ref={qrRef}
                     style={{
-    backgroundColor: "#ffffff",
-    color: "#000000",
-  }}
+                    backgroundColor: "#ffffff",
+                    color: "#000000",
+                  }}
                     // className="bg-white p-3 rounded-xl shadow-inner border border-gray-200"
                   >
                     <a
