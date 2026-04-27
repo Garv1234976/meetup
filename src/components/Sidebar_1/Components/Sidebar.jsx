@@ -521,7 +521,7 @@ const handleShareQR = async () => {
         title: `${user.name} is on Meetup 👋`,
 
 text: `
-Hey! 😊
+Hey! 😊 ${user.name} there.
 
 I'm on *Meetup* — come join me and let's connect as friends 💬
 
@@ -1114,7 +1114,7 @@ See you on Meetup! 🚀
                 >
                   <QRCode
                     value={generateInviteLink(user)}
-                    logoImage={user.picture || Logo}
+                    logoImage={Logo}
                     logoWidth={35}
                     logoHeight={25}
                     logoPadding={2}
