@@ -75,6 +75,8 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
 
   const [hasNotification, setHasNotification] = useState(false);
   const [tooltip, setTooltip] = useState(null);
+  const [sendRequest, setSendRequest] = useState(null);
+
   const navigate = useNavigate();
 
 
@@ -430,14 +432,18 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
       const res = await fetch(
         `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/${inviteInput}`,
         {
-          method: "GET",
+          method: "POST",
           credentials: "include",
           headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      if (!res.ok) throw new Error();
+      const response = await res.json();
 
+      
+      if (!res.ok) throw new Error();
+          // console.log(response);
+          setSendRequest(response.message)
       setInviteInput("");
 
       // ✅ SUCCESS ANIMATION
@@ -474,6 +480,29 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
 
   // const requests = user?.friendRequestsReceived || [];
 
+  useEffect(() => {
+  const handler = (e) => {
+    const data = e.detail;
+
+    console.log("📩 Sidebar received:", data);
+
+    // 🔴 trigger blinker
+    setHasNotification(true);
+
+    // 🔥 update request list
+    setRequests((prev) => {
+      const exists = prev.some((r) => r._id === data.user._id);
+      if (exists) return prev;
+
+      return [data.user, ...prev];
+    });
+  };
+
+  window.addEventListener("friend-request-received", handler);
+
+  return () =>
+    window.removeEventListener("friend-request-received", handler);
+}, []);
   return (
     <>
       <div
@@ -678,20 +707,27 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
               title="Requests"
               className=" flex flex-col items-center py-2 rounded-md cursor-pointer
                           bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200">
+                            
               <div
 
                 className="flex flex-col items-center"
               >
+                
                 {open ? (
                   <i className="fa-regular fa-envelope-open cursor-pointer text-xl"></i>
                 ) : (
                   <i className="fa-regular fa-envelope cursor-pointer text-xl"></i>
                 )}
 
-                {requests.length > 0 && <span className="bg-red-600 p-[4px] rounded-full   absolute "></span>}
+               
                 <span className="text-[10px] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-all duration-200">REQUESTS</span>
               </div>
-
+ {requests.length > 0 &&(
+                   <>
+                    <span className="absolute   w-3 h-3 bg-red-600 rounded-full animate-ping"></span>
+                    <span className="absolute   w-3 h-3 bg-red-600 rounded-full"></span> 
+                  </>
+                ) }
 
             </div>
             {/* {requests.length > 0 && (
@@ -794,7 +830,7 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
                           </div>
                         </AnimatePresence>
                       )}
-                      <div className="flex flex-col justify-center items-center mt-2">
+                      {/* <div className="flex flex-col justify-center items-center mt-2">
                         <div className="flex items-center gap-2 bg-gray-200  rounded-sm">
                           <button
                             className="text-xs font-medium px-1 cursor-pointer"
@@ -835,7 +871,7 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
                         <span className="text-xs underline ">
                           copy url then Share{" "}
                         </span>
-                      </div>
+                      </div> */}
                     </div>
                   </div>
 
@@ -1022,17 +1058,28 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
               </h2>
 
               {/* QR BOX */}
-              <div id="scanQrcodetoinvitefriend" className="bg-white p-3 rounded-xl shadow-inner border border-gray-200">
-                <QRCode
-                  value={`${generateInviteLink(user)}`}
-                  logoImage={Logo}
-                  logoWidth={35}
-                  logoHeight={25}
-                  logoPadding={2}
-                  logoPaddingStyle="circle"
-                  removeQrCodeBehindLogo={true}
-                  ecLevel="H"
-                />
+              <div
+                id="scanQrcodetoinvitefriend"
+                className="bg-white p-3 rounded-xl shadow-inner border border-gray-200"
+              >
+                <a
+                  href={generateInviteLink(user)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <QRCode
+                    value={generateInviteLink(user)}
+                    logoImage={Logo}
+                    logoWidth={35}
+                    logoHeight={25}
+                    logoPadding={2}
+                    logoPaddingStyle="circle"
+                    removeQrCodeBehindLogo={true}
+                    ecLevel="L" 
+                    size={180} 
+                  />
+                </a>
+
               </div>
 
               {/* INVITE LINK */}
@@ -1124,7 +1171,7 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
             className="fixed top-5 right-5 bg-green-500 text-white px-4 py-3 rounded-xl shadow-xl flex items-center gap-2 z-[9999]"
           >
             <span className="text-lg">✅</span>
-            <span className="text-sm font-medium">Request Sent</span>
+            <span className="text-sm font-medium">{sendRequest}</span>
           </motion.div>
         )}
         {inviteError && (

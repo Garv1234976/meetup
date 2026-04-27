@@ -160,6 +160,10 @@ export function GetAllNotification() {
 }
 
 function getMessage(n) {
+  if(n.type === "new_request"){
+    console.log(n.user);
+    return `${n.user.name} sends friend request to you.`
+  }
   if (n.type === "declined_by_other") {
     return `${n.user?.name} declined your request ❌`;
   }

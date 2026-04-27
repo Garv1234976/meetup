@@ -3,7 +3,7 @@ import Sidebar_Two from "../components/Sidebar_2";
 import { TypingProvider } from "../context/TypingContext";
 import { SocketProvider } from "../context/SocketContext";
 import { UserProvider } from "../context/Profile";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function MainApp() {
   const [openInvite, setOpenInvite] = useState(false);
@@ -14,6 +14,17 @@ export default function MainApp() {
     setResetKey((prev) => prev + 1); 
     setIsChatOpen(false);
   };
+  useEffect(()=> {
+    const redirectUrl = localStorage.getItem("redirectAfterLogin");
+          if (redirectUrl) {
+  localStorage.removeItem("redirectAfterLogin");
+
+  // 🔥 optional delay for smooth UX
+  setTimeout(() => {
+    window.location.href = redirectUrl;
+  }, 0);
+}
+  },[])
   return (
     <>
       {/* <SocketProvider> */}

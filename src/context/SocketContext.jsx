@@ -271,6 +271,24 @@ newSocket.on("new_message_notification", ({ chatId, from }) => {
   }));
 });
 
+newSocket.on("new_friend_request", async (data) => {
+  console.log("📩 GLOBAL REQUEST:", data);
+
+  // 🔴 optional: save notification
+  await saveNotification({
+    ...data,
+    uniqueId: `request_${data.user._id}`,
+    isRead: false,
+  });
+
+  // 🔥 GLOBAL EVENT (IMPORTANT)
+  window.dispatchEvent(
+    new CustomEvent("friend-request-received", {
+      detail: data,
+    })
+  );
+});
+
     return () => {
       newSocket.off("new_friend_added");
       newSocket.disconnect();
