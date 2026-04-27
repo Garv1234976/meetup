@@ -383,7 +383,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
       setMembers(data.subscribers);
 
       setLoadingMembers(false);
-      console.log(data.subscribers);
+      // console.log(data.subscribers);
 
     } catch (error) {
       console.log("Hydration failed");
@@ -1570,7 +1570,11 @@ const handleShareQR = async (channelname) => {
                 <div
                     id=""
                     ref={qrRef}
-                    className="bg-white p-3 rounded-xl shadow-inner border border-gray-200"
+                    style={{
+    backgroundColor: "#ffffff",
+    color: "#000000",
+  }}
+                    // className="bg-white p-3 rounded-xl shadow-inner border border-gray-200"
                   >
                     <a
                       href={generateInviteLink(channel)}
