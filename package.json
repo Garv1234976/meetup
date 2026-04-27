@@ -20,6 +20,7 @@
     "draft-js-html": "^0.1.5",
     "draftjs-to-html": "^0.9.1",
     "driver.js": "^1.4.0",
+    "html2canvas": "^1.4.1",
     "lottie-react": "^2.4.1",
     "motion": "^12.20.1",
     "react": "^19.1.0",

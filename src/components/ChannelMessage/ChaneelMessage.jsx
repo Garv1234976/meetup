@@ -1,13 +1,14 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Theme } from "../../theme/globalTheme";
 import { useEffect, useState } from "react";
-
+import html2canvas from "html2canvas";
 import { useSocket } from "../../context/SocketContext";
 import { useRef } from "react";
 import { useAuth } from "../../context/AuthContex";
 import { useNavigate } from "react-router-dom";
 
 import { createClient } from "@supabase/supabase-js";
+import QRCode from "react-qrcode-logo";
 
 function generateInviteLink(channel) {
   const payload = {
@@ -79,6 +80,32 @@ const MembersSkeleton = () => (
     ))}
   </div>
 );
+
+
+const handleShareQR = async (channelname) => {
+  try {
+    const canvas = await html2canvas(qrRef.current);
+    const blob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/png")
+    );
+
+    const file = new File([blob], "invite-qr.png", {
+      type: "image/png",
+    });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        title: `Join *${channelname}* channel`,
+        text: "Scan this QR or use the link",
+        files: [file], // ✅ QR IMAGE
+      });
+    } else {
+      alert("Sharing not supported on this device");
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
 export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const { user } = useAuth();
   const channel = fullchannelobject;
@@ -144,6 +171,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const [showAudioModal, setShowAudioModal] = useState(false);
   const chunksRef = useRef([]);
   const startTimeRef = useRef(0);
+  const qrRef = useRef(null);
   useEffect(() => {
     setActiveChannel(channelid);
 
@@ -1535,7 +1563,60 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                     {channel?.totalSubscribers} subscribers
                   </span>
                 </div>
+                <div className="flex items-center flex-col gap-2">
+                  <div>
+                    <span className="font-semibold  border-blue-500 border-2 px-3 rounded-2xl">Add Members</span>
+                  </div>
+                <div
+                    id=""
+                    ref={qrRef}
+                    className="bg-white p-3 rounded-xl shadow-inner border border-gray-200"
+                  >
+                    <a
+                      href={generateInviteLink(channel)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <QRCode
+                        value={generateInviteLink(channel)}
+                        logoImage={'/m.svg'}
+                        logoWidth={35}
+                        logoHeight={25}
+                        logoPadding={2}
+                        logoPaddingStyle="circle"
+                        removeQrCodeBehindLogo={true}
+                        ecLevel="L" 
+                        size={180} 
+                      />
+                    </a>
+                  </div>
+                  <div id="ShareOptions" className="flex gap-3 w-50">
+                <button
+                  onClick={() =>
+                    copyToClipboard(
+                      `${generateInviteLink(channel)}`,
+                    )
+                  }
+                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-xs py-2 rounded-md"
+                >
+                  Copy Link
+                </button>
 
+                <button
+                  // onClick={() =>
+                  //   navigator.share?.({
+                  //     title: `Join *${channel?.name}* channel`,
+                  //     text: "This link Expires in 1 hr",
+                  //     url: `${generateInviteLink(channel)}`,
+                  //   })
+                  // }
+                  onClick={() => handleShareQR(channel?.name)}
+                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-xs py-2 rounded-md"
+                >
+                  Share
+                </button>
+              </div>
+                  </div>
                 <div className="text-sm text-gray-600">
                   {channel?.description || "No description"}
                 </div>
