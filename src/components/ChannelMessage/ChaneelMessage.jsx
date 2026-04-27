@@ -82,30 +82,7 @@ const MembersSkeleton = () => (
 );
 
 
-const handleShareQR = async (channelname) => {
-  try {
-    const canvas = await html2canvas(qrRef.current);
-    const blob = await new Promise((resolve) =>
-      canvas.toBlob(resolve, "image/png")
-    );
 
-    const file = new File([blob], "invite-qr.png", {
-      type: "image/png",
-    });
-
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({
-        title: `Join *${channelname}* channel`,
-        text: "Scan this QR or use the link",
-        files: [file], // ✅ QR IMAGE
-      });
-    } else {
-      alert("Sharing not supported on this device");
-    }
-  } catch (err) {
-    console.error(err);
-  }
-};
 export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const { user } = useAuth();
   const channel = fullchannelobject;
@@ -762,7 +739,30 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
 
   const isUserAdmin = (id) =>
     channelState.admins.includes(id);
+const handleShareQR = async (channelname) => {
+  try {
+    const canvas = await html2canvas(qrRef.current);
+    const blob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/png")
+    );
 
+    const file = new File([blob], "invite-qr.png", {
+      type: "image/png",
+    });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        title: `Join *${channelname}* channel`,
+        text: "Scan this QR or use the link",
+        files: [file], // ✅ QR IMAGE
+      });
+    } else {
+      alert("Sharing not supported on this device");
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
 
   return (
     <>
@@ -1593,9 +1593,13 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
                   <div id="ShareOptions" className="flex gap-3 w-50">
                 <button
                   onClick={() =>
-                    copyToClipboard(
-                      `${generateInviteLink(channel)}`,
-                    )
+                    // copyToClipboard(
+                    //   `${generateInviteLink(channel)}`,
+                    // )
+                    {
+                      const link = generateInviteLink(channel)
+                      navigator.clipboard.writeText(link)
+                    }
                   }
                   className="flex-1 bg-gray-200 hover:bg-gray-300 text-xs py-2 rounded-md"
                 >
