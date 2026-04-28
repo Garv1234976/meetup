@@ -291,9 +291,9 @@ export function ExplorePeople() {
                                                 <p className="text-sm sm:text-base font-semibold">
                                                     {user.name}
                                                 </p>
-                                                <p className="text-xs text-gray-400">
+                                                {/* <p className="text-xs text-gray-400">
                                                     {user.followersCount ?? user.friends?.length ?? 0} followers
-                                                </p>
+                                                </p> */}
                                             </div>
                                         </div>
 
