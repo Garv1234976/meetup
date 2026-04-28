@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Logo from "/logo.svg";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContex";
+import { useTour } from "../../context/TourContext";
 
 export function ExplorePeople() {
     const navigate = useNavigate();
@@ -16,6 +17,8 @@ export function ExplorePeople() {
     const [searchResults, setSearchResults] = useState([]);
     const [searchLoading, setSearchLoading] = useState(false);
     // const [requested, setRequested] = useState({});
+    const { showTourPrompt, closeTourPrompt, startTourByType, resetSteps, registerStep, startTour } = useTour();
+    
     const requested = user?.friendRequestsSent || [];
 
     useEffect(() => {
@@ -40,6 +43,25 @@ export function ExplorePeople() {
         fetchExplore();
     }, []);
 
+
+     useEffect(() => {
+    resetSteps();
+    registerStep({
+          element: "#Popular",
+          popover: {
+            title: "Popular People ⭐",
+            description: "Explore popular profiles on Meetup and send friend requests to connect instantly 🤝.",
+          },
+        });
+    registerStep({
+          element: "#Normaluser",
+          popover: {
+            title: "Discover People 👥",
+            description: "Browse more users and connect with new people by sending a friend request 🚀",
+          },
+        });
+    startTour();
+  })
     const sendRequest = async (inviteNumber) => {
         try {
             const res = await fetch(
@@ -183,7 +205,9 @@ export function ExplorePeople() {
                 <div className="max-w-5xl mx-auto">
 
                     {/* 🔥 POPULAR */}
-                    <div className="mt-3">
+                    <div 
+                    id="Popular"
+                    className="mt-3">
                         <h3 className="text-sm sm:text-base font-semibold mb-2 px-1">
                             🔥 Popular
                         </h3>
@@ -246,7 +270,9 @@ export function ExplorePeople() {
                     </div>
 
                     {/* 🔥 SUGGESTIONS */}
-                    <div className="mt-5">
+                    <div
+                    id="Normaluser"
+                     className="mt-5">
                         <h3 className="text-sm sm:text-base font-semibold mb-3 px-1">
                             Suggested for you
                         </h3>
