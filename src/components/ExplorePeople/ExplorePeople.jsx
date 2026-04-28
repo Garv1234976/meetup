@@ -233,7 +233,7 @@ export function ExplorePeople() {
                                         <motion.button
                                             whileTap={{ scale: 0.9 }}
                                             onClick={() => sendRequest(user.inviteNumber, user._id)}
-                                            className={`text-xs sm:text-sm px-3 py-1.5 rounded-full ${requested.includes(user._id)
+                                            className={`text-[10px] font-semibold sm:text-sm px-3 py-1.5 rounded-full ${requested.includes(user._id)
                                                     ? "bg-gray-300 text-black"
                                                     : "bg-blue-500 text-white"
                                                 }`}
