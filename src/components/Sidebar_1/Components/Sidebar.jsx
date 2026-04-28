@@ -938,10 +938,24 @@ See you on Meetup! 🚀
 
             <div onClick={() => setIsProfile(true)} className="flex flex-col items-center py-2 rounded-md cursor-pointer
                           bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200">
-              <i
-                className="fa-solid fa-user"
+              
+                {user.isStar ? (
+                  <div className="relative">
+                                            <div className="p-[2px] rounded-full bg-gradient-to-tr from-blue-500">
+                                                <img
+                                                    src={user.picture}
+                                                    className="w-10 h-10 sm:w-10 sm:h-10 rounded-full border-2 border-white object-contain"
+                                                    onError={(e) => e.target.src = "/m.svg"}
+                                                />
+                                            </div>
 
-              ></i>
+                                            <div className="absolute top-1 -right-1 bg-yellow-400 text-white text-[10px] px-1 rounded-full shadow">
+                                                <i className="fa-solid fa-star"></i>
+                                            </div>
+                                        </div>
+                ): (
+                  <img src={user.picture}  className="w-8" onError={(e) => e.target.src = 'm.svg'} />
+                )}
               <span className="text-[10px] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-all duration-200">PROFILE</span>
             </div>
 
