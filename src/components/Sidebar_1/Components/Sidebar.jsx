@@ -954,7 +954,7 @@ See you on Meetup! 🚀
                                             </div>
                                         </div>
                 ): (
-                  <img src={user.picture}  className="w-8" onError={(e) => e.target.src = 'm.svg'} />
+                  <img src={user.picture}  className="w-8 rounded-full object-contain" onError={(e) => e.target.src = 'm.svg'} />
                 )}
               <span className="text-[10px] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-all duration-200">PROFILE</span>
             </div>
