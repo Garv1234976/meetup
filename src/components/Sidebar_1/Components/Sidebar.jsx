@@ -93,17 +93,17 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
     };
   }, []);
 
-  useEffect(() => {
-    resetSteps();
-    registerStep({
-          element: "#Exxplore",
-          popover: {
-            title: "Explore",
-            description: "Explore people on Meetup and send friend requests to connect 🤝",
-          },
-        });
-    startTour();
-  })
+  // useEffect(() => {
+  //   resetSteps();
+  //   registerStep({
+  //         element: "#Exxplore",
+  //         popover: {
+  //           title: "Explore",
+  //           description: "Explore people on Meetup and send friend requests to connect 🤝",
+  //         },
+  //       });
+  //   startTour();
+  // })
   useEffect(() => {
     if (!openInvite) return;
 

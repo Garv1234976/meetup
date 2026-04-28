@@ -44,24 +44,24 @@ export function ExplorePeople() {
     }, []);
 
 
-     useEffect(() => {
-    resetSteps();
-    registerStep({
-          element: "#Popular",
-          popover: {
-            title: "Popular People ⭐",
-            description: "Explore popular profiles on Meetup and send friend requests to connect instantly 🤝.",
-          },
-        });
-    registerStep({
-          element: "#Normaluser",
-          popover: {
-            title: "Discover People 👥",
-            description: "Browse more users and connect with new people by sending a friend request 🚀",
-          },
-        });
-    startTour();
-  })
+//      useEffect(() => {
+//     resetSteps();
+//     registerStep({
+//           element: "#Popular",
+//           popover: {
+//             title: "Popular People ⭐",
+//             description: "Explore popular profiles on Meetup and send friend requests to connect instantly 🤝.",
+//           },
+//         });
+//     registerStep({
+//           element: "#Normaluser",
+//           popover: {
+//             title: "Discover People 👥",
+//             description: "Browse more users and connect with new people by sending a friend request 🚀",
+//           },
+//         });
+//     startTour();
+//   })
     const sendRequest = async (inviteNumber) => {
         try {
             const res = await fetch(
