@@ -593,6 +593,23 @@ See you on Meetup! 🚀
             ></i>} */}
           </div>
           <div className="flex flex-col gap-3 lg:text-xl text-sm">
+             <div
+              id="Exxplore"
+              // onClick={openInviteModal}
+              onClick={() => navigate('/explore')}
+              className="flex flex-col items-center py-2 rounded-md cursor-pointer
+                          bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200"
+              title="Home"
+            >
+              <i
+
+                className="fa-solid fa-compass text-xl"
+              ></i>
+
+              <span className="text-[10px] font-bold mt-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                Explore
+              </span>
+            </div>
             {/* <i className="fa-solid fa-hand-point-up"></i> */}
             <div className="relative flex items-center">
 

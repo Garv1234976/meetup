@@ -13,6 +13,7 @@ import JoinChannelOverview from './Join/JoinChannelOverview';
 import FriendInvitation from "./Join/FriendInvitation";
 import TourPrompt from "./Tour/TourPrompt";
 import { GetAllNotification } from "./Notification/GetAllNotification";
+import { ExplorePeople } from "./ExplorePeople/ExplorePeople";
 export default function AppRoutes({ clientId }) {
   return (
     <Routes>
@@ -79,6 +80,14 @@ export default function AppRoutes({ clientId }) {
         element={
           <ProtectedRoute>
             <GetAllNotification />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/explore"
+        element={
+          <ProtectedRoute>
+            <ExplorePeople />
           </ProtectedRoute>
         }
       />

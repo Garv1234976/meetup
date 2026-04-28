@@ -1,19 +1,37 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContex";
 import { motion, AnimatePresence } from "framer-motion";
+import QRCode from "react-qrcode-logo";
+import html2canvas from "html2canvas";
+
+
+function generateInviteLink(user) {
+  const payload = {
+    code: user.inviteNumber,
+    exp: Date.now() + 60 * 60 * 1000,
+    // exp: Date.now() + 6 * 1000, // for test 6 sec
+    secret: "monkey123",
+  };
+
+  const encoded = btoa(JSON.stringify(payload));
+
+  return `https://merchantcoin.shop/friend-invitation?invitecode=${encoded}`;
+}
+
 
 const UserProfile = () => {
   const { user, setUser } = useAuth();
 
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState("");
-   const [enableTour, SetEnableTour] = useState(false);
+  const [enableTour, SetEnableTour] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
     phoneNumber: "",
   });
+  const qrRef = useRef(null)
 
 
   useEffect(() => {
@@ -90,7 +108,7 @@ const UserProfile = () => {
         method: "POST",
         credentials: "include",
       });
-    } catch {}
+    } catch { }
 
     localStorage.clear();
     sessionStorage.clear();
@@ -102,75 +120,112 @@ const UserProfile = () => {
     return <div className="p-4">No user data</div>;
   }
 
+  const handleShareQR = async () => {
+    try {
+      const canvas = await html2canvas(qrRef.current);
+      const blob = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/png")
+      );
+
+      const file = new File([blob], "invite-qr.png", {
+        type: "image/png",
+      });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `${user.name} is on Meetup 👋`,
+
+          text: `
+Hey! 😊 ${user.name} there.
+
+I'm on *Meetup* — come join me and let's connect as friends 💬
+
+🔗 Tap to connect with me:
+${generateInviteLink(user)}
+
+📷 Or scan the QR code to join instantly
+
+⏳ This invite expires in 1 hour
+
+See you on Meetup! 🚀
+`,
+          files: [file], // ✅ QR IMAGE
+        });
+      } else {
+        alert("Sharing not supported on this device");
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
   return (
-    <div className="w-full h-full bg-white p-4 sm:p-6 rounded-md flex flex-col gap-6">
+  <div className="w-full h-[80vh] overflow-hidden overflow-y-scroll bg-gradient-to-b from-white to-gray-100 p-4 sm:p-6 flex flex-col gap-6 rounded-2xl">
 
-      {/* HEADER */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border-b pb-4">
+    {/* 🔹 HEADER */}
+    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 border-b pb-4">
 
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-blue-500 flex items-center justify-center text-white text-lg sm:text-xl font-bold">
-            {user.name?.charAt(0)?.toUpperCase()}
-          </div>
-
-          <div className="break-all">
-            <h2 className="text-base sm:text-lg font-semibold">{user.name}</h2>
-            <p className="text-xs sm:text-sm text-gray-500">{user.email}</p>
-          </div>
+      <div className="flex items-center gap-4">
+        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 flex items-center justify-center text-white text-lg sm:text-xl font-bold shadow">
+          {user.name?.charAt(0)?.toUpperCase()}
         </div>
 
-        {/* ACTION BUTTONS */}
-        <div className="flex gap-2 flex-wrap">
-
-          {!isEditing ? (
-            <div
-              onClick={() => setIsEditing(true)}
-              className="flex items-center gap-2 cursor-pointer bg-blue-500 px-3 py-1.5 rounded-md text-white text-sm"
-            >
-              Edit
-              <i className="fa-solid fa-pen"></i>
-            </div>
-          ) : (
-            <>
-              <div
-                onClick={handleSave}
-                className="flex items-center gap-2 bg-green-500 px-3 py-1.5 rounded-md text-white text-sm cursor-pointer"
-              >
-                Save
-                <i className="fa-solid fa-check"></i>
-              </div>
-
-              <div
-                onClick={() => setIsEditing(false)}
-                className="flex items-center gap-2 bg-red-500 px-3 py-1.5 rounded-md text-white text-sm cursor-pointer"
-              >
-                Cancel
-                <i className="fa-solid fa-xmark"></i>
-              </div>
-            </>
-          )}
+        <div className="break-all">
+          <h2 className="text-base sm:text-lg font-semibold">{user.name}</h2>
+          <p className="text-xs sm:text-sm text-gray-500">{user.email}</p>
         </div>
       </div>
 
-      {/* ERROR */}
-      <AnimatePresence>
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="text-red-500 text-sm"
+      {/* ACTIONS */}
+      <div className="flex gap-2 flex-wrap justify-start sm:justify-end">
+        {!isEditing ? (
+          <button
+            onClick={() => setIsEditing(true)}
+            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 px-3 py-1.5 rounded-md text-white text-sm"
           >
-            {error}
-          </motion.div>
-        )}
-      </AnimatePresence>
+            Edit <i className="fa-solid fa-pen"></i>
+          </button>
+        ) : (
+          <>
+            <button
+              onClick={handleSave}
+              className="flex items-center gap-2 bg-green-500 hover:bg-green-600 px-3 py-1.5 rounded-md text-white text-sm"
+            >
+              Save <i className="fa-solid fa-check"></i>
+            </button>
 
-      {/* FORM */}
+            <button
+              onClick={() => setIsEditing(false)}
+              className="flex items-center gap-2 bg-red-500 hover:bg-red-600 px-3 py-1.5 rounded-md text-white text-sm"
+            >
+              Cancel <i className="fa-solid fa-xmark"></i>
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+
+    {/* ERROR */}
+    <AnimatePresence>
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="text-red-500 text-sm bg-red-50 p-2 rounded-md"
+        >
+          {error}
+        </motion.div>
+      )}
+    </AnimatePresence>
+
+    {/* 🔹 MAIN CONTENT */}
+    <div className="flex flex-col lg:flex-row gap-6">
+
+      {/* LEFT - FORM */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="flex flex-col gap-4 w-full"
+        className="flex-1 flex flex-col gap-4"
       >
 
         {/* NAME */}
@@ -179,11 +234,11 @@ const UserProfile = () => {
             name="name"
             value={form.name}
             onChange={handleChange}
-            className="border p-2 rounded w-full"
+            className="border p-3 rounded-lg w-full focus:ring-2 focus:ring-blue-400"
             placeholder="Name"
           />
         ) : (
-          <div className="bg-gray-100 p-3 rounded text-sm sm:text-base">
+          <div className="bg-white p-3 rounded-lg shadow text-sm sm:text-base">
             Name: {user.name}
           </div>
         )}
@@ -194,11 +249,11 @@ const UserProfile = () => {
             name="email"
             value={form.email}
             onChange={handleChange}
-            className="border p-2 rounded w-full"
+            className="border p-3 rounded-lg w-full focus:ring-2 focus:ring-blue-400"
             placeholder="Email"
           />
         ) : (
-          <div className="bg-gray-100 p-3 rounded text-sm sm:text-base">
+          <div className="bg-white p-3 rounded-lg shadow text-sm sm:text-base">
             Email: {user.email}
           </div>
         )}
@@ -209,25 +264,23 @@ const UserProfile = () => {
             name="phoneNumber"
             value={form.phoneNumber}
             onChange={handleChange}
-            className="border p-2 rounded w-full"
+            className="border p-3 rounded-lg w-full focus:ring-2 focus:ring-blue-400"
             placeholder="Phone (10 digit)"
           />
         ) : (
-          <div className="bg-gray-100 p-3 rounded text-sm sm:text-base">
+          <div className="bg-white p-3 rounded-lg shadow text-sm sm:text-base">
             Phone: {user.phoneNumber || "Not added"}
           </div>
         )}
 
         {/* STATUS */}
         {!isEditing && (
-          <div className="bg-gray-100 p-3 rounded text-sm sm:text-base">
+          <div className="bg-white p-3 rounded-lg shadow text-sm sm:text-base">
             Status:{" "}
             {user.isVerify ? (
               <span className="text-green-600 font-semibold">Verified</span>
             ) : (
-              <span className="text-yellow-600 font-semibold">
-                Not verified
-              </span>
+              <span className="text-yellow-600 font-semibold">Not verified</span>
             )}
           </div>
         )}
@@ -239,31 +292,88 @@ const UserProfile = () => {
             name="password"
             value={form.password}
             onChange={handleChange}
-            className="border p-2 rounded w-full"
+            className="border p-3 rounded-lg w-full focus:ring-2 focus:ring-blue-400"
             placeholder="New Password (optional)"
           />
         )}
       </motion.div>
 
-      {/* LOGOUT */}
-      <div
+      {/* RIGHT - QR */}
+      <div className="flex flex-col items-center gap-4 w-full lg:w-[300px]">
 
-      onClick={() => {
-        localStorage.setItem("tourActive", "true");
-        window.location.reload(); 
-      }}
-      >
-        <span className="bg-gray-500 py-1 text-white font-semibold px-2 rounded-lg">Enable Tour again</span>
+        <div
+          ref={qrRef}
+           style={{
+                    backgroundColor: "#ffffff",
+                    color: "#000000",
+                  }}
+          // className="bg-white p-4 rounded-xl shadow-md border flex justify-center"
+        >
+           <a
+                            href={generateInviteLink(user)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <QRCode
+                              value={generateInviteLink(user)}
+                              logoImage={'/m.svg'}
+                              logoWidth={35}
+                              logoHeight={25}
+                              logoPadding={2}
+                              logoPaddingStyle="circle"
+                              removeQrCodeBehindLogo={true}
+                              ecLevel="L" 
+                              size={180} 
+                            />
+                          </a>
+        </div>
+
+        <div className="flex gap-3 w-full">
+          <button
+            onClick={() =>
+              navigator.clipboard.writeText(generateInviteLink(user))
+            }
+            className="flex-1 bg-gray-200 hover:bg-gray-300 text-xs py-2 rounded-md"
+          >
+            Copy Link
+          </button>
+
+          <button
+            onClick={handleShareQR}
+            className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-xs py-2 rounded-md"
+          >
+            Share
+          </button>
+        </div>
       </div>
-      <div
+    </div>
+
+    {/* 🔹 FOOTER ACTIONS */}
+    <div className="flex flex-col sm:flex-row justify-between gap-3">
+
+      <button
+        onClick={() => {
+          localStorage.setItem("tourActive", "true");
+          window.location.reload();
+        }}
+        className="bg-gray-500 hover:bg-gray-600 text-white text-sm px-4 py-2 rounded-lg"
+      >
+        Enable Tour again
+      </button>
+
+      <button
         onClick={handleLogout}
-        className="flex items-center justify-center gap-2 p-3 bg-red-500 hover:bg-red-600 text-white rounded-xl cursor-pointer w-full sm:w-fit"
+        className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl"
       >
         <i className="fa-solid fa-right-from-bracket"></i>
         Logout
-      </div>
+      </button>
     </div>
-  );
+  </div>
+);
 };
 
 export default UserProfile;
+/**
+ * make it responsice to both mobile n desk dont change any vaiable just fix the ui
+ */
