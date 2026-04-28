@@ -170,7 +170,7 @@ export function ExplorePeople() {
                                                 : "bg-blue-500 text-white"
                                             }`}
                                     >
-                                        {requested.includes(user._id) ? "Requested" : "Follow"}
+                                        {requested.includes(user._id) ? "Requested" : "Add Friend"}
                                     </button>
                                 </motion.div>
                             ))
@@ -238,7 +238,7 @@ export function ExplorePeople() {
                                                     : "bg-blue-500 text-white"
                                                 }`}
                                         >
-                                            {requested.includes(user._id) ? "Requested" : "Follow"}
+                                            {requested.includes(user._id) ? "Requested" : "Add Friend"}
                                         </motion.button>
                                     </motion.div>
                                 ))}
@@ -305,7 +305,7 @@ export function ExplorePeople() {
                                                     : "bg-blue-500 text-white"
                                                 }`}
                                         >
-                                            {requested.includes(user._id) ? "Requested" : "Follow"}
+                                            {requested.includes(user._id) ? "Requested" : "Add Friend"}
                                         </motion.button>
                                     </motion.div>
                                 ))}
