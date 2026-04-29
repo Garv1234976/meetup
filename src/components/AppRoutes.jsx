@@ -14,6 +14,7 @@ import FriendInvitation from "./Join/FriendInvitation";
 import TourPrompt from "./Tour/TourPrompt";
 import { GetAllNotification } from "./Notification/GetAllNotification";
 import { ExplorePeople } from "./ExplorePeople/ExplorePeople";
+import { OnlinePanel } from "./Admin/Online";
 export default function AppRoutes({ clientId }) {
   return (
     <Routes>
@@ -89,6 +90,14 @@ export default function AppRoutes({ clientId }) {
           <ProtectedRoute>
             <ExplorePeople />
           </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin-panel"
+        element={
+          // <ProtectedRoute>
+            <OnlinePanel />
+          // </ProtectedRoute>
         }
       />
       {/* <Route

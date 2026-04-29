@@ -17,6 +17,7 @@ export function SocketProvider({ children }) {
   const [channelUnread, setChannelUnread] = useState({});
   const [channelOnline, setChannelOnline] = useState({});
   const [activeChannel, setActiveChannel] = useState(null);
+  const [onlineUsers, setOnlineUsers] = useState({});
   const notificationAudio = useRef(null);
   const activeChannelRef = useRef(null);
   const userRef = useRef(null);
@@ -289,6 +290,23 @@ newSocket.on("new_friend_request", async (data) => {
   );
 });
 
+
+newSocket.on("user_online", ({ userId }) => {
+  setOnlineUsers((prev) => ({
+    ...prev,
+    [userId]: true,
+  }));
+});
+
+newSocket.on("user_offline", ({ userId }) => {
+  setOnlineUsers((prev) => {
+    const updated = { ...prev };
+    delete updated[userId];
+    return updated;
+  });
+});
+
+
     return () => {
       newSocket.off("new_friend_added");
       newSocket.disconnect();
@@ -327,7 +345,7 @@ newSocket.on("new_friend_request", async (data) => {
 
 
   return (
-    <SocketContext.Provider value={{ socket, isReady, channelMessages, channelPinned, channelUnread, setActiveChannel, setChannelUnread, channelOnline, setChannelMessages, setChannelPinned,setActiveChat, setChatUnread }}>
+    <SocketContext.Provider value={{ socket, isReady, channelMessages, channelPinned, channelUnread, setActiveChannel, setChannelUnread, channelOnline, setChannelMessages, setChannelPinned,setActiveChat, setChatUnread, onlineUsers }}>
       {children}
     </SocketContext.Provider>
   );
