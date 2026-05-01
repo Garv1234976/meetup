@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 export function OnlinePanel() {
   const { socket } = useSocket();
   const [users, setUsers] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
 
   // 🔥 FETCH SNAPSHOT
   useEffect(() => {
@@ -32,6 +33,24 @@ export function OnlinePanel() {
     fetchOnline();
   }, []);
 
+
+  useEffect(() => {
+  async function fetchAnalytics() {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/admin/analytics-today`,
+        { credentials: "include" }
+      );
+
+      const data = await res.json();
+      setAnalytics(data);
+    } catch (err) {
+      console.log("Analytics fetch failed");
+    }
+  }
+
+  fetchAnalytics();
+}, []);
   // 🔥 REALTIME SYNC
   useEffect(() => {
     if (!socket) return;
@@ -79,6 +98,47 @@ export function OnlinePanel() {
           {users.length} active
         </span>
       </div>
+
+      {analytics && (
+  <div className="grid grid-cols-2 gap-3 mb-4">
+
+    <div className="bg-white p-3 rounded-xl shadow-sm">
+      <p className="text-xs text-gray-400">DAU</p>
+      <p className="text-lg font-bold text-blue-500">
+        {analytics.dau}
+      </p>
+    </div>
+
+    <div className="bg-white p-3 rounded-xl shadow-sm">
+      <p className="text-xs text-gray-400">Messages</p>
+      <p className="text-lg font-bold text-green-500">
+        {analytics.messages}
+      </p>
+    </div>
+
+    <div className="bg-white p-3 rounded-xl shadow-sm">
+      <p className="text-xs text-gray-400">Channels</p>
+      <p className="text-lg font-bold text-purple-500">
+        {analytics.channels}
+      </p>
+    </div>
+
+    <div className="bg-white p-3 rounded-xl shadow-sm">
+      <p className="text-xs text-gray-400">Broadcasts</p>
+      <p className="text-lg font-bold text-pink-500">
+        {analytics.broadcasts}
+      </p>
+    </div>
+
+    <div className="bg-white p-3 rounded-xl shadow-sm col-span-2">
+      <p className="text-xs text-gray-400">Friend Requests</p>
+      <p className="text-lg font-bold text-orange-500">
+        {analytics.requests}
+      </p>
+    </div>
+
+  </div>
+)}
 
       {/* 🔹 LIST */}
       {users.length === 0 ? (
