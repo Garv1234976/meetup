@@ -772,6 +772,7 @@ See you on Meetup! 🚀
 
             <div
               onClick={() => setOpen(!open)}
+              // onClick={() => navi}
               title="Requests"
               className=" flex flex-col items-center py-2 rounded-md cursor-pointer
                           bg-transparent group-hover:bg-[#90e0ef] hover:bg-gray-100 transition-all duration-200">
@@ -868,11 +869,27 @@ See you on Meetup! 🚀
                                 style={{ backgroundColor: Theme.thirdBackgroundColor }}
                               >
                                 <div className="flex items-end gap-2">
-                                  <img
+                                 {req.isStar === true ? (
+                                  <div className="relative">
+                                            <div className="p-[2px] rounded-full bg-gradient-to-tr from-blue-500">
+                                                <img
+                                                    src={user.picture}
+                                                    className="w-7 h-7 sm:w-7 sm:h-7 rounded-full border-2 border-white object-contain"
+                                                    onError={(e) => e.target.src = "/m.svg"}
+                                                />
+                                            </div>
+
+                                            <div className="absolute -top-1 -right-1  text-black bg-amber-400 py-0.5 text-[7px] px-1 rounded-full ">
+                                                <i className="fa-solid fa-star"></i>
+                                            </div>
+                                        </div>
+                                 ) : (
+                                   <img
                                     className="w-7 h-7 rounded-full"
                                     src={req.picture}
                                     alt={req.name}
                                   />
+                                 )}
                                   <p className="text-xs font-semibold uppercase">
                                     {req.name}
                                   </p>

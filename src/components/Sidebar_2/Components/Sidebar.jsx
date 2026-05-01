@@ -407,12 +407,24 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey, setIsChatOpen }) {
 
 
         </div>
-        <div className="md:hidden flex items-center justify-between px-3 py-2">
+        <div className="md:hidden flex items-center justify-between px-3 py-6">
           <div className="">
             <img className="w-30" src={Logo} alt="" />
           </div>
           <div id="broadcastBtn" onClick={() => navigate('/broadcast')}>
-            <button className="font-semibold text-sm bg-blue-400 cursor-pointer px-3 py-1 rounded-xl text-white">Create Broadcast</button>
+            <button
+              className="relative glow-wrapper px-2 py-1 rounded-md font-bold outline-none cursor-pointer"
+              // onClick={openModal}
+              onClick={() => {
+                if (friendsOnly.length === 0) {
+                  setNoFriendModal(true);
+                } else {
+                  navigate("/broadcast");
+                }
+              }}
+            >
+              <span className="relative">Broadcast</span>
+            </button>
           </div>
         </div>
         <div className="flex justify-center px-4  items-center gap-1">
@@ -452,7 +464,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey, setIsChatOpen }) {
         </div>
         <div
           id="StartfirstChat"
-          className="overflow-y-auto scrollbar scrollbar-thin scrollbar-track-sky-200  scrollbar-thumb-blue-400 max-h-[calc(100vh-130px)] px-2"
+          className="overflow-y-auto scrollbar scrollbar-thin scrollbar-track-sky-200  scrollbar-thumb-blue-400 max-h-[calc(100vh-130px)] px-2 pb-[100px]"
           style={{ scrollbarGutter: "stable" }}
         >
           {/* <AnimatePresence> */}
@@ -561,9 +573,12 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey, setIsChatOpen }) {
     {chatUnread?.[friend._id] > 99 ? "99+" : chatUnread?.[friend._id]}
   </span>
 )} */}
-                {!friend.isChannel && chatUnread?.[friend.chatId] || 0 > 0 && (
+
+                {!friend.isChannel && (chatUnread?.[friend.chatId] || 0) > 0 && (
                   <span className="bg-red-500 text-white text-xs px-2 font-semibold rounded-full mt-1">
-                    {unreadCount > 99 ? "99+" : unreadCount}
+                    {(chatUnread?.[friend.chatId] || 0) > 99
+                      ? "99+"
+                      : chatUnread?.[friend.chatId]}
                   </span>
                 )}
               </div>

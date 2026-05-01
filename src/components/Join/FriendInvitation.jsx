@@ -88,29 +88,29 @@ export default function FriendInvitation() {
     if (!currUser && !isExpired) return <p className="text-center mt-10">User not found</p>;
     if (isExpired) {
         return (
-             <div className="flex flex-1 h-screen items-center justify-center">
-      <div className="bg-white p-6 rounded-xl shadow-md text-center w-[320px]">
+            <div className="flex flex-1 h-screen items-center justify-center">
+                <div className="bg-white p-6 rounded-xl shadow-md text-center w-[320px]">
 
-        <div className="text-4xl mb-3">⛔</div>
+                    <div className="text-4xl mb-3">⛔</div>
 
-        <h2 className="text-lg font-bold text-red-500">
-          Invite Expired
-        </h2>
+                    <h2 className="text-lg font-bold text-red-500">
+                        Invite Expired
+                    </h2>
 
-        <p className="text-sm text-gray-500 mt-2">
-          This Friend Request link has expired.  
-          Ask Friend for a new Request.
-        </p>
+                    <p className="text-sm text-gray-500 mt-2">
+                        This Friend Request link has expired.
+                        Ask Friend for a new Request.
+                    </p>
 
-        <button
-          onClick={() => navigate("/chats")}
-          className="mt-5 w-full bg-blue-500 text-white py-2 rounded-md"
-        >
-          Go to Chats
-        </button>
+                    <button
+                        onClick={() => navigate("/chats")}
+                        className="mt-5 w-full bg-blue-500 text-white py-2 rounded-md"
+                    >
+                        Go to Chats
+                    </button>
 
-      </div>
-    </div>
+                </div>
+            </div>
         );
     }
     return (
@@ -138,12 +138,35 @@ export default function FriendInvitation() {
                 <main className=" flex flex-1 items-center justify-center">
                     <div className="w-60 bg-white p-6 rounded-xl shadow-md sm:w-[350px] text-center">
 
-                        {/* Profile */}
-                        <img
-                            src={currUser.picture}
-                            onError={(e) => (e.target.src = "/m.svg")}
-                            className="w-20 h-20 rounded-full mx-auto mb-4"
-                        />
+                        <div className="flex justify-center mb-4">
+                            <div className="relative">
+
+                                {currUser.isStar ? (
+                                    <div className="p-[6px] rounded-full bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500">
+                                        <img
+                                            src={currUser.picture}
+                                            onError={(e) => (e.target.src = "/m.svg")}
+                                            className="w-20 h-20 rounded-full object-contain bg-white"
+                                        />
+                                    </div>
+                                ) : (
+                                    <img
+                                        src={currUser.picture}
+                                        onError={(e) => (e.target.src = "/m.svg")}
+                                        className="w-20 h-20 rounded-full object-contain"
+                                    />
+                                )}
+
+                                {/* ⭐ STAR BADGE */}
+                                {currUser.isStar && (
+                                    <div className="absolute bottom-0 right-0 translate-x-1 translate-y-1 bg-yellow-400 text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full shadow-md border border-white">
+                                        <i className="fa-solid fa-star text-[10px]"></i>
+                                    </div>
+                                )}
+
+                            </div>
+                        </div>
+
 
                         <h2 className="text-xl font-bold">{currUser.name}</h2>
 
@@ -153,41 +176,41 @@ export default function FriendInvitation() {
 
                         <div className="">
 
-                        <div className="flex gap-3 mt-5">
-                            {/* Decline */}
-                            <button
-                                onClick={handleDecline}
-                                disabled={actionLoading !== null}
-                                className="cursor-pointer w-1/2 bg-gray-300 py-2 rounded-md flex items-center justify-center"
-                            >
-                                {actionLoading === "decline" ? (
-                                    <span className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></span>
-                                ) : (
-                                    "Decline"
-                                )}
-                            </button>
+                            <div className="flex gap-3 mt-5">
+                                {/* Decline */}
+                                <button
+                                    onClick={handleDecline}
+                                    disabled={actionLoading !== null}
+                                    className="cursor-pointer w-1/2 bg-gray-300 py-2 rounded-md flex items-center justify-center"
+                                >
+                                    {actionLoading === "decline" ? (
+                                        <span className="animate-spin h-5 w-5 border-2 border-black border-t-transparent rounded-full"></span>
+                                    ) : (
+                                        "Decline"
+                                    )}
+                                </button>
 
-                            {/* Accept */}
-                            <button
-                                onClick={handleAccept}
-                                disabled={actionLoading !== null}
-                                className="cursor-pointer w-1/2 bg-blue-500 text-white py-2 rounded-md flex items-center justify-center"
-                            >
-                                {actionLoading === "accept" ? (
-                                    <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
-                                ) : (
-                                    "Accept"
-                                )}
-                            </button>
-                        </div>
-                        <div className="mt-4 bg-yellow-100 border border-yellow-300 text-yellow-800 text-xs px-3 py-2 rounded-lg flex items-center gap-2">
-                        <span>⏳</span>
-                        <span className="font-semibold">This invite link will expire in 1 hour</span>
-                        </div>
+                                {/* Accept */}
+                                <button
+                                    onClick={handleAccept}
+                                    disabled={actionLoading !== null}
+                                    className="cursor-pointer w-1/2 bg-blue-500 text-white py-2 rounded-md flex items-center justify-center"
+                                >
+                                    {actionLoading === "accept" ? (
+                                        <span className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></span>
+                                    ) : (
+                                        "Accept"
+                                    )}
+                                </button>
+                            </div>
+                            <div className="mt-4 bg-yellow-100 border border-yellow-300 text-yellow-800 text-xs px-3 py-2 rounded-lg flex items-center gap-2">
+                                <span>⏳</span>
+                                <span className="font-semibold">This invite link will expire in 1 hour</span>
+                            </div>
                         </div>
                     </div>
                 </main>
-                
+
             </div>
 
             {/* 🔹 Footer */}

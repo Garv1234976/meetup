@@ -3,7 +3,9 @@ import { io } from "socket.io-client";
 import { useAuth } from "./AuthContex";
 import { useRef } from "react";
 import { saveNotification } from "../../utils/saveNotification";
-
+import { addNotification, getAllUnread, updateUnread } from "../../utils/indexedDB";
+import { useDispatch } from "react-redux";
+import { deleteMessage } from "../redux/features/chats/chatSlice";
 const SOCKET_URL = import.meta.env.VITE_BACK_DEV_API;
 
 const SocketContext = createContext();
@@ -12,6 +14,7 @@ export function SocketProvider({ children }) {
   const { user, loading } = useAuth();
   const [socket, setSocket] = useState(null);
   const [isReady, setIsReady] = useState(false);
+  const dispatch = useDispatch();
   const [channelMessages, setChannelMessages] = useState({});
   const [channelPinned, setChannelPinned] = useState({});
   const [channelUnread, setChannelUnread] = useState({});
@@ -95,6 +98,9 @@ export function SocketProvider({ children }) {
       setChannelUnread((prev) => {
         if (data.channelId === activeChannelRef.current) return prev;
         if (String(data.senderId) === String(user._id)) return prev;
+
+        const newCount = (prev[data.channelId] || 0) + 1;
+        updateUnread(data.channelId, newCount, "channel");
         return {
           ...prev,
           [data.channelId]: (prev[data.channelId] || 0) + 1,
@@ -182,29 +188,155 @@ export function SocketProvider({ children }) {
     });
 
 
-   newSocket.on("receive_message", (msg) => {
-  const currentChatId = activeChatRef.current;
 
-  const isActive = String(currentChatId) === String(msg.chatId);
-  const isSelf = String(msg.from) === String(userRef.current?._id);
+newSocket.off("receive_message");
 
-  // 🔥 UNREAD COUNT
-  if (!isActive && !isSelf) {
-    setChatUnread((prev) => ({
-      ...prev,
-      [msg.chatId]: (prev[msg.chatId] || 0) + 1,
-    }));
+newSocket.on("receive_message", async (msg) => {
+  console.log("📩 message:", msg._id);
+
+  // =========================
+  // 🔥 BROADCAST
+  // =========================
+  if (msg.isBroadcast) {
+  const currentUserId = userRef.current?._id;
+  const isSelf = String(msg.from) === String(currentUserId);
+
+  // =========================
+  // 🔥 1. CHANNEL UI UPDATE
+  // =========================
+  const activeChannelId = activeChannelRef.current;
+
+  if (String(msg.channelId) === String(activeChannelId)) {
+    setChannelMessages((prev) => {
+      const prevMsgs = prev[activeChannelId] || [];
+
+      if (prevMsgs.some(m => m.broadcastId === msg.broadcastId)) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [activeChannelId]: [...prevMsgs, msg],
+      };
+    });
   }
 
-  // 🔥 OPTIONAL: store message globally
+  // =========================
+  // 🔥 2. 1:1 CHAT UNREAD (THIS WAS MISSING)
+  // =========================
+  const isActiveChat = String(activeChatRef.current) === String(msg.chatId);
+
+  if (!isSelf && !isActiveChat) {
+    await addNotification({
+      uniqueId: msg.broadcastId || msg._id,
+      chatId: msg.chatId,
+      senderId: msg.from,
+      type: "chat",
+    });
+
+    setChatUnread((prev) => {
+      const newCount = (prev[msg.chatId] || 0) + 1;
+
+      updateUnread(msg.chatId, newCount, "chat");
+
+      return {
+        ...prev,
+        [msg.chatId]: newCount,
+      };
+    });
+  }
+
+  // =========================
+  // 🔥 3. ALSO ADD TO CHAT UI
+  // =========================
   setChatMessages((prev) => {
     const prevMsgs = prev[msg.chatId] || [];
+
+    if (prevMsgs.some(m => m.broadcastId === msg.broadcastId)) {
+      return prev;
+    }
+
     return {
       ...prev,
       [msg.chatId]: [...prevMsgs, msg],
     };
   });
 
+  return;
+}
+
+  // =========================
+  // 🔥 NORMAL CHAT
+  // =========================
+  const currentUserId = userRef.current?._id;
+  const isSelf = String(msg.from) === String(currentUserId);
+  const isActive = String(activeChatRef.current) === String(msg.chatId);
+
+  // 🚫 ignore self
+  if (isSelf) return;
+
+  // =========================
+  // 🔥 PREVENT DUPLICATE PROCESSING
+  // =========================
+  let alreadyExists = false;
+
+  setChatMessages((prev) => {
+    const prevMsgs = prev[msg.chatId] || [];
+
+    if (prevMsgs.some((m) => m._id === msg._id)) {
+      alreadyExists = true;
+      return prev;
+    }
+
+    return {
+      ...prev,
+      [msg.chatId]: [...prevMsgs, msg],
+    };
+  });
+
+  if (alreadyExists) return; // 🔥 STOP DUPLICATE
+
+  // =========================
+  // 🔥 UNREAD + INDEXDB
+  // =========================
+  if (!isActive) {
+    await addNotification({
+      uniqueId: msg._id,
+      chatId: msg.chatId,
+      senderId: msg.from,
+    });
+
+    setChatUnread((prev) => {
+  const newCount = (prev[msg.chatId] || 0) + 1;
+
+  updateUnread(msg.chatId, newCount, "chat");
+
+  return {
+    ...prev,
+    [msg.chatId]: newCount,
+  };
+});
+  }
+});
+newSocket.on("broadcast_channel_message", (msg) => {
+  const activeChannelId = activeChannelRef.current;
+
+  // ✅ only update if current channel matches
+  if (String(msg.channelId) !== String(activeChannelId)) return;
+
+  setChannelMessages((prev) => {
+    const prevMsgs = prev[msg.channelId] || [];
+
+    // 🔥 prevent duplicate
+    if (prevMsgs.some(m => m.broadcastId === msg.broadcastId)) {
+      return prev;
+    }
+
+    return {
+      ...prev,
+      [msg.channelId]: [...prevMsgs, msg],
+    };
+  });
 });
 
 newSocket.on("friend_request_accepted", async (data) => {
@@ -259,18 +391,7 @@ newSocket.on("friend_request_declined", async (data) => {
 });
 
 
-newSocket.on("new_message_notification", ({ chatId, from }) => {
-  const activeChatId = activeChatRef.current;
 
-  // ❌ user is inside same chat → ignore
-  if (String(activeChatId) === String(chatId)) return;
-
-  // 🔥 increase unread
-  setChatUnread((prev) => ({
-    ...prev,
-    [chatId]: (prev[chatId] || 0) + 1,
-  }));
-});
 
 newSocket.on("new_friend_request", async (data) => {
   console.log("📩 GLOBAL REQUEST:", data);
@@ -306,6 +427,55 @@ newSocket.on("user_offline", ({ userId }) => {
   });
 });
 
+newSocket.on("message_deleted", ({ messageId, chatId }) => {
+   console.log("🔥 DELETE EVENT RECEIVED:", messageId);
+  dispatch(deleteMessage({ messageId, chatId }));
+});
+
+newSocket.on("channel_message_deleted", ({ messageId, channelId }) => {
+  setChannelMessages((prev) => {
+    const prevMsgs = prev[channelId] || [];
+
+    return {
+      ...prev,
+      [channelId]: prevMsgs.map((m) =>
+        String(m._id) === String(messageId)
+          ? {
+              ...m,
+              text: "🚫 Message deleted",
+              file: null,
+              preview: null,
+              reactions: [], // 🔥 remove emojis
+              deleted: true,
+            }
+          : m
+      ),
+    };
+  });
+});
+
+
+newSocket.on("broadcast_deleted", ({ messageId, channelId }) => {
+  setChannelMessages((prev) => {
+    const prevMsgs = prev[channelId] || [];
+
+    return {
+      ...prev,
+      [channelId]: prevMsgs.map((m) =>
+        String(m._id) === String(messageId)
+          ? {
+              ...m,
+              text: "🚫 Broadcast deleted",
+              file: null,
+              preview: null,
+              reactions: [], // 🔥 remove emojis
+              deleted: true,
+            }
+          : m
+      ),
+    };
+  });
+});
 
     return () => {
       newSocket.off("new_friend_added");
@@ -341,11 +511,34 @@ newSocket.on("user_offline", ({ userId }) => {
     audio.volume = 0.7;
 
     notificationAudio.current = audio;
-  }, []);
+  }, []); 
 
 
+  useEffect(() => {
+  async function loadUnread() {
+    const data = await getAllUnread();
+
+    setChatUnread(data); // for chats
+    setChannelUnread(data); // OR split if needed
+  }
+
+  loadUnread();
+}, []);
+
+
+const deleteMessageforChannelnBoradCast = (msg, channelId) => {
+  if (!socket) return;
+
+  socket.emit("delete_message", {
+    messageId: msg._id,
+    channelId: channelId, // ✅ FIXED
+    type: msg.isBroadcast ? "broadcast" : "channel",
+    deleteForAll: true,
+  });
+};
   return (
-    <SocketContext.Provider value={{ socket, isReady, channelMessages, channelPinned, channelUnread, setActiveChannel, setChannelUnread, channelOnline, setChannelMessages, setChannelPinned,setActiveChat, setChatUnread, onlineUsers }}>
+    <SocketContext.Provider value={{ socket, isReady, channelMessages, channelPinned, channelUnread, setActiveChannel, setChannelUnread, channelOnline, setChannelMessages, setChannelPinned,setActiveChat, setChatUnread, onlineUsers,chatUnread,setChatMessages,
+chatMessages,deleteMessageforChannelnBoradCast }}>
       {children}
     </SocketContext.Provider>
   );

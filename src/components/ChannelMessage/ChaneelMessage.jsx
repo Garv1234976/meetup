@@ -89,7 +89,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
 
   const BroadCastChannel = channel.isBroadcast
 
-  const { socket, isReady, channelMessages, channelPinned, setActiveChannel, channelUnread, setChannelUnread, channelOnline, setChannelMessages, setChannelPinned } = useSocket();
+  const { socket, isReady, channelMessages, channelPinned, setActiveChannel, channelUnread, setChannelUnread, channelOnline, setChannelMessages, setChannelPinned, deleteMessageforChannelnBoradCast } = useSocket();
 
 
   const [showMenu, setShowMenu] = useState(false);
@@ -302,20 +302,51 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   };
 
 
-  const handleSendMessage = () => {
-    if (!message.trim() || !socket) return;
+const handleSendMessage = () => {
+  if (!message.trim() || !socket) return;
 
+  if (BroadCastChannel) {
+
+    if (!channel.broadcastRecipients?.length) {
+      console.log("❌ No recipients", channel);
+      return;
+    }
+
+    console.log("🚀 Sending broadcast:", channel.broadcastRecipients);
+    socket.emit("send_broadcast", {
+      channelId: channel._id, 
+      recipients: channel.broadcastRecipients,
+      text: message,
+      preview: getPreviewData, // 🔥 keep preview
+    });
+
+//     setChannelMessages((prev) => ({
+//   ...prev,
+//   [channelid]: [
+//     ...(prev[channelid] || []),
+//     {
+//       _id: Date.now(),
+//       sender: user._id,
+//       text: message,
+//       file: null,
+//       preview: getPreviewData,
+//       createdAt: new Date().toISOString(),
+//       isBroadcast: true,
+//     },
+//   ],
+// }));
+  } else {
     socket.emit("send_channel_message", {
       channelId: channelid,
       text: message,
       preview: getPreviewData,
     });
+  }
 
-    // reset input
-    setMessage("");
-    setGetPreviewData(null);
-    setShowPreview(false);
-  };
+  setMessage("");
+  setGetPreviewData(null);
+  setShowPreview(false);
+};
 
 
 
@@ -522,13 +553,22 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
 
     if (!url) return;
 
-    // 🔥 STEP 4 — send to socket
-    socket.emit("send_channel_message", {
-      channelId: channelid,
-      file: url,
-      fileType: file.type,
-      fileSize: file.size,
-    });
+    if (BroadCastChannel) {
+  socket.emit("send_broadcast", {
+    channelId: channel._id, 
+    recipients: channel.broadcastRecipients,
+    file: url,
+    fileType: file.type,
+    fileSize: file.size,
+  });
+} else {
+  socket.emit("send_channel_message", {
+    channelId: channelid,
+    file: url,
+    fileType: file.type,
+    fileSize: file.size,
+  });
+}
 
     // 🔥 STEP 5 — remove temp message
     setChannelMessages((prev) => ({
@@ -628,14 +668,22 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
 
     if (!url) return;
 
-    // ✅ send to backend
-    socket.emit("send_channel_message", {
-      channelId: channelid,
-      file: url,
-      fileType: "audio/webm",
-      fileSize: file.size,
-      fileName: "voice.webm",
-    });
+    if (BroadCastChannel) {
+  socket.emit("send_broadcast", {
+    channelId: channel._id, 
+    recipients: channel.broadcastRecipients,
+    file: url,
+    fileType: "audio/webm",
+    fileName: "voice.webm",
+  });
+} else {
+  socket.emit("send_channel_message", {
+    channelId: channelid,
+    file: url,
+    fileType: "audio/webm",
+    fileName: "voice.webm",
+  });
+}
 
     // ✅ remove temp
     setChannelMessages((prev) => ({
@@ -1025,7 +1073,8 @@ See you inside! 🚀
 
                       {BroadCastChannel === true ?
                         "" : String(user._id) === String(channelState.creator) ? (
-                          <div className="absolute top-1 -right-4" title="Pin">
+                          !msg.deleted && (
+                            <div className="absolute top-1 -right-4" title="Pin">
                             <i
                               onClick={() => {
                                 socket.emit("pin_channel_message", {
@@ -1036,6 +1085,7 @@ See you inside! 🚀
                               className="fa-solid fa-thumbtack cursor-pointer text-sm text-gray-700 hover:scale-110"
                             ></i>
                           </div>
+                          )
                         ) : ''
                       }
 
@@ -1211,7 +1261,19 @@ See you inside! 🚀
                       {/* MESSAGE TAIL */}
                       {/* <div className="absolute -bottom-1 left-3 w-3 h-3 bg-blue-400 rotate-45"></div> */}
                     </div>
-
+                      
+                      {isAdmin && (
+                         msg.deleted ? "" : (
+                          <button
+    onClick={() => deleteMessageforChannelnBoradCast(msg,channelid)}
+    className={`cursor-pointer  w-7 h-7 flex items-center justify-center rounded-full 
+    bg-white/70 backdrop-blur shadow-sm 
+    active:scale-90 transition`}
+  >
+    <i className="fa-solid fa-trash text-[10px] text-red-500"></i>
+  </button>
+                         )
+                      )}
                     <div className="flex flex-col items-start gap-3">
                       {/*  REACTION POPUP (TOP FLOATING) */}
                       {reactionMenuOpenIndex === index && (
@@ -1238,17 +1300,20 @@ See you inside! 🚀
                       {/*  RIGHT SIDE BUTTON */}
 
                       {BroadCastChannel === true ? "" : (
-                        <div
+                        msg.deleted ? "" : (
+                          <div
                           onClick={() =>
                             setReactionMenuOpenIndex(
                               reactionMenuOpenIndex === index ? null : index
                             )
                           }
-                          className="bg-white px-1 py-1 rounded-full shadow cursor-pointer  flex items-center gap-1"
+                          
+                          className={`bg-white px-1 py-1 rounded-full shadow cursor-pointer  flex items-center gap-1 `}
                         >
                           <i className="text-sm fa-regular fa-face-grin"></i>
                           <i className="fa-solid fa-chevron-down text-xs"></i>
                         </div>
+                        )
                       )}
                     </div>
                   </motion.div>

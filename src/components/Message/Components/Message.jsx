@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { createClient } from "@supabase/supabase-js";
 import { useAuth } from "../../../context/AuthContex";
 import { Theme } from "../../../theme/globalTheme";
 import {
@@ -7,6 +8,7 @@ import {
   setLastMessage,
   toggleReaction,
 } from "../../../redux/features/chats/chatSlice";
+import { useChatSystem } from "../../../context/useChatSystem";
 import { fetchLastTwoDaysMessages } from "../../../redux/features/chats/chatThunks";
 import { formatDateHeader } from "../../../../utils/DateFormater";
 import { useTyping } from "../../../context/TypingContext";
@@ -14,6 +16,14 @@ import { useSocket } from "../../../context/SocketContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useTour } from "../../../context/TourContext";
+import { clearUnread } from "../../../../utils/indexedDB";
+
+
+const supabase = createClient(
+  "https://ywehlxverbpaavdxoxcd.supabase.co",
+  "sb_publishable_SGALij1Ival2DdhZ3xjmXA_khrEOMpp"
+);
+
 
 const htmlToText = (html) => {
   return html
@@ -62,17 +72,18 @@ const SkeletonBubble = ({ isFromFriend }) => {
 };
 export function Messaging({ slectedFriends, onBack }) {
   // console.log("This is the Message compo",JSON.stringify(slectedFriends));
-  const { socket, isReady,setActiveChat, setChatUnread,chatMessages  } = useSocket();
+  const { socket, isReady, setActiveChat, setChatUnread, chatMessages } = useSocket();
   const { user } = useAuth();
   const { updateTyping } = useTyping();
   const currentUserId = user?._id;
   const dispatch = useDispatch();
-   const messages = useSelector((state) => state.chat.messages);
-  // const messages = chatMessages[slectedFriends.chatId] || [];
-// 
-  const { showTourPrompt, closeTourPrompt, startTourByType,resetSteps,registerStep,startTour } = useTour();
+  const messages = useSelector((state) => state.chat.messages);
 
-  const [message, setMessage] = useState("");
+  
+
+  const { showTourPrompt, closeTourPrompt, startTourByType, resetSteps, registerStep, startTour } = useTour();
+
+  // const [message, setMessage] = useState("");
   const [typingUserId, setTypingUserId] = useState(null);
   const [suggestText, setSuggestText] = useState([]);
   const isSelectingRef = useRef(false);
@@ -87,45 +98,60 @@ export function Messaging({ slectedFriends, onBack }) {
   const prevMsgCountRef = useRef(0);
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const navigate = useNavigate();
+  const chat = useChatSystem({
+    chatId: slectedFriends.chatId,
+    friendId: slectedFriends._id,
+    dispatch,
+  });
+
+
+  const [showAudioModal, setShowAudioModal] = useState(false);
+
+  const mediaRecorderRef = useRef(null);
+  const chunksRef = useRef([]);
   // Fetch messages on chat change
-useEffect(() => {
-  resetSteps();
-  registerStep({
-              element: "#inputforChat",
-              popover: {
-                title: "Send Message",
-                description: "Type and send your first message ✉️",
-              }
-            });
-  registerStep({
-              element: "#SendFirstMessageWithButton",
-              popover: {
-                title: "Tap to Send",
-                description: "Hit that send Button",
-              }
-            });
+  // useEffect(() => {
+  //   resetSteps();
+  //   registerStep({
+  //               element: "#inputforChat",
+  //               popover: {
+  //                 title: "Send Message",
+  //                 description: "Type and send your first message ✉️",
+  //               }
+  //             });
+  //   registerStep({
+  //               element: "#SendFirstMessageWithButton",
+  //               popover: {
+  //                 title: "Tap to Send",
+  //                 description: "Hit that send Button",
+  //               }
+  //             });
 
 
-            startTour();
-},[])
+  //             startTour();
+  // },[])
 
 
-useEffect(() => {
-  if (!slectedFriends?.chatId) return;
+  useEffect(() => {
+    if (!slectedFriends?.chatId) return;
 
-  setChatUnread((prev) => ({
-    ...prev,
-    [slectedFriends.chatId]: 0,
-  }));
-}, [slectedFriends?.chatId]);
+    setChatUnread((prev) => ({
+      ...prev,
+      [slectedFriends.chatId]: 0,
+    }));
+  }, [slectedFriends?.chatId]);
 
-useEffect(() => {
-  if (!slectedFriends?.chatId) return;
+  useEffect(() => {
+    if (!slectedFriends?.chatId) return;
 
-  setActiveChat(slectedFriends.chatId);
-
-  return () => setActiveChat(null);
-}, [slectedFriends?.chatId]);
+    setActiveChat(slectedFriends.chatId);
+    clearUnread(slectedFriends.chatId);
+setChatUnread((prev) => ({
+  ...prev,
+  [slectedFriends.chatId]: 0,
+}));
+    return () => setActiveChat(null);
+  }, [slectedFriends?.chatId]);
 
 
   useEffect(() => {
@@ -231,6 +257,22 @@ useEffect(() => {
   const handleInputChange = (e) => {
     const value = e.target.value;
     setMessage(value);
+
+    const match = value.match(/(https?:\/\/[^\s]+)/);
+
+    if (match && socket) {
+      setShowPreview(true);
+      setIsPreviewLoading(true);
+      setPreviewData(null);
+
+      socket.emit("get_link_preview", match[0]);
+    }
+
+    if (!match) {
+      setShowPreview(false);
+      setPreviewData(null);
+      setIsPreviewLoading(false);
+    }
     if (value.startsWith("/")) {
       setCommand(true);
     } else if (value.trim() === "") {
@@ -258,40 +300,46 @@ useEffect(() => {
     }, 400);
   };
 
+  // const sendMessage = (e) => {
+  //   e.preventDefault();
+  //   if (!message.trim() || !socket) return;
+
+  //   if (message.trim() === "/confetti") {
+  //     import("canvas-confetti").then((confetti) => {
+  //       confetti.default({
+  //         angle: 120,
+  //         spread: 100,
+  //         particleCount: 300,
+  //         origin: { x: 1, y: 1 },
+  //       });
+  //     });
+  //     setMessage("");
+  //     setCommand(false);
+  //     return;
+  //   }
+
+  //   dispatch(setLastMessage(message));
+  //   const newMsg = {
+  //     _id: "temp-" + Date.now(),
+  //     from: currentUserId,
+  //     to: slectedFriends._id,
+  //     text: message,
+  //     preview: previewData, 
+  //     timestamp: new Date().toISOString(),
+  //     reactions: [],
+  //   };
+
+  //   socket.emit("send_message", newMsg);
+  //   dispatch(addMessage(newMsg));
+  //   setMessage("");
+  //   setSuggestText([]);
+  // };
+
+
   const sendMessage = (e) => {
     e.preventDefault();
-    if (!message.trim() || !socket) return;
-
-    if (message.trim() === "/confetti") {
-      import("canvas-confetti").then((confetti) => {
-        confetti.default({
-          angle: 120,
-          spread: 100,
-          particleCount: 300,
-          origin: { x: 1, y: 1 },
-        });
-      });
-      setMessage("");
-      setCommand(false);
-      return;
-    }
-
-    dispatch(setLastMessage(message));
-    const newMsg = {
-      _id: "temp-" + Date.now(),
-      from: currentUserId,
-      to: slectedFriends._id,
-      text: message,
-      timestamp: new Date().toISOString(),
-      reactions: [],
-    };
-
-    socket.emit("send_message", newMsg);
-    dispatch(addMessage(newMsg));
-    setMessage("");
-    setSuggestText([]);
+    chat.sendText();
   };
-
   const handleReaction = (messageId, emoji) => {
     // 🔥 instant UI update (sender side)
     dispatch(toggleReaction({
@@ -478,8 +526,8 @@ useEffect(() => {
                             {/* EMOJI BUTTON (HOVER ONLY) */}
                             <div
                               className={`relative transition-all duration-200 cursor-pointer ${hoveredMessageId === msg._id
-                                ? "opacity-100 scale-100"
-                                : "opacity-100 scale-75"
+                                ? "opacity-100 "
+                                : "opacity-100 "
                                 } ${isFromFriend ? "ml-1" : "mr-1"}`}
                             >
                               <div
@@ -527,12 +575,29 @@ useEffect(() => {
                             </div>
 
                             {/* MESSAGE BUBBLE */}
-                            <div
+                            {!msg.isDeleted === true ?  (
+                                <button
+    onClick={() => chat.deleteMessage(msg)}
+    className={`cursor-pointer  ${
+      isFromFriend ? "ml-1" : "mr-1"
+    } w-7 h-7 flex items-center justify-center rounded-full 
+    bg-white/70 backdrop-blur shadow-sm 
+    active:scale-90 transition`}
+  >
+    <i className="fa-solid fa-trash text-[10px] text-red-500"></i>
+  </button>
+                            ) : ""}
+                            
+                            <motion.div
+                              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              transition={{ duration: 0.2 }}
                               className={`px-4 py-2 text-sm rounded-2xl shadow-md relative break-words whitespace-pre-wrap max-w-xl ${isFromFriend
-                                ? "bg-white text-gray-800 rounded-tl-none"
-                                : "bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-tr-none"
+                                  ? "bg-white text-gray-800 rounded-tl-none"
+                                  : "bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-tr-none"
                                 }`}
                             >
+                              
                               {/* TEXT */}
                               {msg?.broadcastId ? (
                                 <pre className="whitespace-pre-wrap break-words font-sans">
@@ -542,6 +607,69 @@ useEffect(() => {
                                 <span className="font-semibold">
                                   {msg.text}
                                 </span>
+                              )}
+                              
+
+                              {msg.file && !msg.fileType?.startsWith("audio") && (
+                                <motion.div
+                                  whileHover={{ scale: 1.02 }}
+                                  className="mt-2 bg-white text-black p-3 rounded-xl shadow flex items-center gap-3 cursor-pointer"
+                                  onClick={() => window.open(msg.file)}
+                                >
+                                  <i className="fa-solid fa-file text-blue-500 text-lg"></i>
+
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium">
+                                      {msg.fileName || "Attachment"}
+                                    </span>
+
+                                    <span className="text-xs text-gray-500">
+                                      {msg.fileSize ? `${(msg.fileSize / 1024).toFixed(1)} KB` : ""}
+                                    </span>
+                                  </div>
+                                </motion.div>
+                              )}
+
+                              {msg.file && msg.fileType?.startsWith("audio") && (
+                                <motion.div
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  className="mt-2 bg-white p-2 rounded-xl shadow"
+                                >
+                                  <audio controls className="w-full">
+                                    <source src={msg.file} />
+                                  </audio>
+                                </motion.div>
+                              )}
+                              {msg.preview && (
+                                <motion.a
+                                  href={msg.preview.url}
+                                  target="_blank"
+                                  initial={{ opacity: 0, scale: 0.95 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  className="block mt-2 w-80 bg-white rounded-xl overflow-hidden shadow border-l-4 border-blue-500 "
+                                >
+                                  {msg.preview.images?.[0] && (
+                                    <img
+                                      src={msg.preview.images[0]}
+                                      className="w-full h-32 object-cover"
+                                    />
+                                  )}
+
+                                  <div className="p-2">
+                                    <div className="text-xs text-gray-500">
+                                      {msg.preview.siteName}
+                                    </div>
+
+                                    <div className="text-sm font-semibold line-clamp-2 text-black">
+                                      {msg.preview.title}
+                                    </div>
+
+                                    <div className="text-xs text-gray-400 line-clamp-2">
+                                      {msg.preview.description}
+                                    </div>
+                                  </div>
+                                </motion.a>
                               )}
                               {/* TIME */}
                               <div
@@ -560,7 +688,7 @@ useEffect(() => {
                               </div>
 
                               {/* REACTIONS DISPLAY */}
-                              {msg.reactions?.length > 0 && (
+                              {!msg.deleted && msg.reactions?.length > 0 && (
                                 <motion.div
                                   initial={{ scale: 0, y: 10 }}
                                   animate={{ scale: 1, y: 0 }}
@@ -579,7 +707,7 @@ useEffect(() => {
                                   ))}
                                 </motion.div>
                               )}
-                            </div>
+                            </motion.div>
                           </div>
                         </div>
                       );
@@ -593,16 +721,34 @@ useEffect(() => {
         </main>
 
         {/* Typing Indicator */}
-        {typingUserId === slectedFriends._id && (
-          <div className="absolute bottom-20 left-4  px-2 py-1 rounded-full  text-sm text-gray-600 dark:text-gray-300">
-            <span className="flex items-center ">
-              <div class="de">
-                <div class="bou"></div>
-                <div class="bou2"></div>
-                <div class="bou3"></div>
-              </div>
-            </span>
-          </div>
+        {typingUserId === slectedFriends._id && !chat.isRecording && !chat.isPreviewingAudio && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="px-4 mb-2"
+          >
+            <div className="inline-flex items-center gap-2 bg-gray-200 px-3 py-1 rounded-full">
+
+              <motion.div className="flex gap-1">
+                {[0, 1, 2].map((i) => (
+                  <motion.span
+                    key={i}
+                    className="w-2 h-2 bg-gray-500 rounded-full"
+                    animate={{ y: [0, -4, 0] }}
+                    transition={{
+                      duration: 0.6,
+                      repeat: Infinity,
+                      delay: i * 0.2,
+                    }}
+                  />
+                ))}
+              </motion.div>
+
+              <span className="text-xs text-gray-600">
+                {slectedFriends.name} typing...
+              </span>
+            </div>
+          </motion.div>
         )}
 
         {/* Message Input */}
@@ -628,6 +774,78 @@ useEffect(() => {
               </div>
             </div>
           ))}
+        {chat.showPreview && (
+          <div className="px-4 mb-2">
+
+            {/* 🔄 LOADING SKELETON */}
+            {chat.isPreviewLoading ? (
+              <div className="w-full max-w-xs bg-gray-100 rounded-xl p-2 shadow-md flex flex-col gap-2">
+                <div className="h-32 bg-gray-300 rounded-lg animate-pulse" />
+                <div className="h-4 bg-gray-300 rounded w-3/4 animate-pulse" />
+                <div className="h-3 bg-gray-300 rounded w-full animate-pulse" />
+                <div className="h-3 bg-gray-300 rounded w-5/6 animate-pulse" />
+              </div>
+            ) : (
+              /* ✅ REAL PREVIEW */
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="w-full max-w-xs bg-white rounded-xl shadow overflow-hidden"
+              >
+                {chat.previewData?.images?.[0] && (
+                  <img
+                    src={chat.previewData.images[0]}
+                    className="w-full h-32 object-cover"
+                  />
+                )}
+
+                <div className="p-3">
+                  <div className="text-xs text-gray-400">
+                    {chat.previewData?.siteName}
+                  </div>
+
+                  <div className="font-semibold text-sm line-clamp-2">
+                    {chat.previewData?.title}
+                  </div>
+
+                  <div className="text-xs text-gray-500 line-clamp-2">
+                    {chat.previewData?.description}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </div>
+        )}
+
+        {chat.uploading && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white p-3 rounded-xl shadow mb-2  w-70 absolute bottom-20 right-5  "
+          >
+            <div className="flex items-center gap-2">
+              <i className="fa-solid fa-upload text-blue-500"></i>
+
+              <div>
+                <div className="text-sm font-medium">
+                  {chat.uploading.fileName}
+                </div>
+
+                <div className="text-xs text-gray-500">
+                  {chat.uploading.progress}%
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full h-2 bg-gray-200 rounded mt-2">
+              <div
+                className="h-full bg-blue-500 rounded"
+                style={{ width: `${chat.uploading.progress}%` }}
+              />
+            </div>
+          </motion.div>
+        )}
+
         <footer
           className="sticky bottom-0 w-full px-4 py-3 border-t  border-gray-100 dark:border-gray-700 "
           style={{ backgroundColor: Theme.thirdBackgroundColor }}
@@ -647,38 +865,175 @@ useEffect(() => {
               </div>
             ))}
           </div>
+
           <form
-          id="inputforChat"
-            onSubmit={sendMessage}
+            id="inputforChat"
+            onSubmit={(e) => e.preventDefault()} // ❌ disable default submit
             className="flex items-center gap-2 bg-white dark:bg-gray-700 p-2 rounded-full"
           >
-            <button
-              type="button"
-              className="text-blue-500 dark:text-blue-400 p-1"
-            >
-              <i className="fa-regular fa-face-smile text-xl"></i>
-            </button>
-            <input
-            
-              type="text"
-              placeholder="Write a message... or type / for cmd"
-              value={message}
-              onChange={handleInputChange}
-              onBlur={() =>
-                socket.emit("stop typing", {
-                  chatId: slectedFriends.chatId,
-                  senderId: currentUserId,
-                })
-              }
-              className="flex-1 px-3 py-2 outline-none bg-transparent text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-white"
-            />
-            <button
-            id="SendFirstMessageWithButton"
-              type="submit"
-              className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-full text-white font-medium text-sm transition-colors"
-            >
-              <span className="hidden md:block">Send</span> <i className="fa-solid fa-paper-plane text-xs"></i>
-            </button>
+
+            {chat.isRecording ? (
+
+              // =========================
+              // 🎤 RECORDING MODE
+              // =========================
+              <motion.div
+                initial={{ y: 40, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="flex items-center justify-between w-full bg-red-50 px-4 py-3 rounded-full"
+              >
+
+                {/* LEFT */}
+                <div className="flex items-center gap-3 text-red-500">
+
+                  <motion.i
+                    className="fa-solid fa-microphone text-lg"
+                    animate={{ scale: [1, 1.3, 1] }}
+                    transition={{ repeat: Infinity, duration: 1 }}
+                  />
+
+                  <div className="flex items-end gap-[2px] h-6">
+                    {[...Array(12)].map((_, i) => (
+                      <motion.span
+                        key={i}
+                        className="w-[2px] bg-red-400 rounded"
+                        animate={{ height: [4, 18, 6] }}
+                        transition={{
+                          duration: 0.6,
+                          repeat: Infinity,
+                          delay: i * 0.05,
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  <span className="text-sm font-medium text-gray-600">
+                    {chat.recordingTime}
+                  </span>
+                </div>
+
+                {/* ACTIONS */}
+                <div className="flex items-center gap-4 text-lg">
+
+                  {/* ❌ Cancel */}
+                  <button
+                    type="button"
+                    onClick={chat.cancelRecording}
+                    className="text-gray-500"
+                  >
+                    <i className="fa-solid fa-trash"></i>
+                  </button>
+
+                  {/* ⏹ Stop only */}
+                  <button
+                    type="button"
+                    onClick={chat.stopRecording}
+                    className="text-red-500"
+                  >
+                    <i className="fa-solid fa-stop"></i>
+                  </button>
+
+                  {/* ➤ SEND (AUTO STOP + SEND) */}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      chat.stopRecording();      // 🔥 force stop
+                      setTimeout(() => {
+                        chat.sendAudio();        // 🔥 then send
+                      }, 200);                   // small buffer for blob
+                    }}
+                    className="text-blue-500"
+                  >
+                    <i className="fa-solid fa-paper-plane"></i>
+                  </button>
+
+                </div>
+              </motion.div>
+
+            ) : chat.isPreviewingAudio ? (
+              <motion.div
+                initial={{ y: 40, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                className="flex items-center justify-between w-full bg-blue-50 px-4 py-3 rounded-full "
+              >
+
+                {/* AUDIO PLAYER */}
+                <audio controls src={chat.audioUrl} className="w-full  mr-3 h-10" />
+
+                {/* ACTIONS */}
+                <div className="flex items-center gap-3 text-lg">
+
+                  {/* ❌ Cancel */}
+                  <button
+                    onClick={() => {
+                      chat.setIsPreviewingAudio(false);
+                      chat.cancelRecording();
+                    }}
+                    className="text-gray-500"
+                  >
+                    <i className="fa-solid fa-trash"></i>
+                  </button>
+
+                  {/* ➤ SEND */}
+                  <button
+                    onClick={async () => {
+                      await chat.sendAudio();
+                      chat.setIsPreviewingAudio(false);
+                    }}
+                    className="text-blue-500"
+                  >
+                    <i className="fa-solid fa-paper-plane"></i>
+                  </button>
+
+                </div>
+              </motion.div>
+            ) : (
+
+              // =========================
+              // 💬 NORMAL MODE
+              // =========================
+              <>
+                <input
+                  type="text"
+                  value={chat.message}
+                  onChange={(e) => chat.handleInputChange(e.target.value)}
+                  className="flex-1 px-3 py-2 outline-none bg-transparent text-sm font-semibold text-white"
+                  placeholder="Write a message..."
+                />
+
+                {/* FILE */}
+                <label className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 cursor-pointer">
+                  <i className="fa-solid fa-paperclip"></i>
+                  <input
+                    type="file"
+                    hidden
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) chat.sendFile(file);
+                    }}
+                  />
+                </label>
+
+                {/* MIC */}
+                <motion.div
+                  whileTap={{ scale: 0.85 }}
+                  onClick={chat.startRecording}
+                  className="w-10 h-10 flex items-center justify-center bg-red-500 text-white rounded-full cursor-pointer"
+                >
+                  <i className="fa-solid fa-microphone"></i>
+                </motion.div>
+
+                {/* SEND */}
+                <button
+                  type="submit"
+                  onClick={chat.sendText}
+                  className="flex items-center gap-2 bg-blue-500 px-4 py-2 rounded-full text-white"
+                >
+                  <i className="fa-solid fa-paper-plane"></i>
+                </button>
+              </>
+            )}
+
           </form>
         </footer>
       </div>
