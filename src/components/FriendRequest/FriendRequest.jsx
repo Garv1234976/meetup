@@ -74,39 +74,39 @@ export function FriendRequest() {
   // =========================
   // ✅ ACCEPT ALL
   // =========================
-  const handleAcceptAll = async () => {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/acceptall`,
-        {
-          method: "POST",
-          credentials: "include",
-        }
-      );
+  // const handleAcceptAll = async () => {
+  //   try {
+  //     const res = await fetch(
+  //       `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/acceptall`,
+  //       {
+  //         method: "POST",
+  //         credentials: "include",
+  //       }
+  //     );
 
-      if (!res.ok) throw new Error();
+  //     if (!res.ok) throw new Error();
 
-      // 🔥 instant UI
-      requests.forEach((req) => {
-        window.dispatchEvent(
-          new CustomEvent("friend-added", { detail: req })
-        );
-      });
+  //     // 🔥 instant UI
+  //     requests.forEach((req) => {
+  //       window.dispatchEvent(
+  //         new CustomEvent("friend-added", { detail: req })
+  //       );
+  //     });
 
-      setRequests([]);
+  //     setRequests([]);
 
-      // 🔥 refresh user
-      const userRes = await fetch(
-        `${import.meta.env.VITE_BACK_DEV_API}/api/me`,
-        { credentials: "include" }
-      );
+  //     // 🔥 refresh user
+  //     const userRes = await fetch(
+  //       `${import.meta.env.VITE_BACK_DEV_API}/api/me`,
+  //       { credentials: "include" }
+  //     );
 
-      const updated = await userRes.json();
-      setUser(updated.user);
-    } catch (err) {
-      console.log("accept all failed");
-    }
-  };
+  //     const updated = await userRes.json();
+  //     setUser(updated.user);
+  //   } catch (err) {
+  //     console.log("accept all failed");
+  //   }
+  // };
 
   // =========================
   // 🔥 DUMMY GROUPING (TEMP)
@@ -126,7 +126,7 @@ export function FriendRequest() {
         <div className="flex items-center gap-3">
           {requests.length > 0 && (
             <button
-              onClick={handleAcceptAll}
+              // onClick={handleAcceptAll}
               className="text-blue-500 text-sm font-medium"
             >
               Accept All

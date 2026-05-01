@@ -353,12 +353,18 @@ export function Sidebar_One({ token, openInvite, setOpenInvite, onReset, isChatO
   const handleAcceptAll = async () => {
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_BACK_DEV_API}/frnd-req/acceptall`,
+        `${import.meta.env.VITE_BACK_DEV_API}/all`,
         {
           method: "POST",
           credentials: "include",
-          headers: { Authorization: `Bearer ${token}` },
-        }
+          headers: {
+    "Content-Type": "application/json",
+  },
+          body: JSON.stringify({
+    userId: user._id,
+  }),
+        },
+        
       );
 
       if (!res.ok) throw new Error();
