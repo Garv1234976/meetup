@@ -417,6 +417,14 @@ setChatUnread((prev) => ({
     setShowRemoveModal(true);
   };
 
+  useEffect(() => {
+  if (messages.length === 0) {
+    setSuggestText([
+      "Hey 😊 nice to connect with you!",
+    ]);
+  }
+}, [messages]);
+
   return (
     <>
       <div
@@ -850,21 +858,37 @@ setChatUnread((prev) => ({
           className="sticky bottom-0 w-full px-4 py-3 border-t  border-gray-100 dark:border-gray-700 "
           style={{ backgroundColor: Theme.thirdBackgroundColor }}
         >
-          <div className="flex justify-center gap-10 mb-1 ">
-            {suggestText.slice(0, 3).map((suggest, index) => (
-              <div
-                key={index}
-                className="bg-blue-400 text-sm text-white p-1 rounded-md font-medium"
-                onClick={() => {
-                  isSelectingRef.current = true;
-                  setMessage(suggest);
-                  setSuggestText([]);
-                }}
-              >
-                {suggest}
-              </div>
-            ))}
-          </div>
+         {messages.length === 0 ? ( <div className="flex flex-col items-center mb-2 gap-2">
+
+  {/* 🔥 HEADLINE */}
+  <div className="text-xs text-gray-500 font-medium">
+    👋 Start the conversation
+  </div>
+
+  {/* 🔥 SUGGESTIONS */}
+  <div className="flex gap-2 flex-wrap justify-center">
+    {suggestText.slice(0, 3).map((suggest, index) => (
+      <div
+        key={index}
+        onClick={() => {
+          isSelectingRef.current = true;
+
+          chat.setMessage(suggest);
+          chat.sendText();
+
+          setSuggestText([]);
+        }}
+        className="px-4 py-2 rounded-full text-white text-sm font-semibold cursor-pointer 
+        bg-gradient-to-r from-blue-500 to-indigo-500 
+        shadow-md active:scale-90 transition hover:shadow-lg"
+      >
+        {suggest}
+      </div>
+    ))}
+  </div>
+
+</div>) : ""}
+         
 
           <form
             id="inputforChat"
