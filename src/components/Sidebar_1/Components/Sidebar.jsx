@@ -873,9 +873,10 @@ See you on Meetup! 🚀
                                   <div className="relative">
                                             <div className="p-[2px] rounded-full bg-gradient-to-tr from-blue-500">
                                                 <img
-                                                    src={user.picture}
+                                                    src={req.picture}
                                                     className="w-7 h-7 sm:w-7 sm:h-7 rounded-full border-2 border-white object-contain"
                                                     onError={(e) => e.target.src = "/m.svg"}
+                                                    alt={req.name}
                                                 />
                                             </div>
 
