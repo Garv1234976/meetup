@@ -104,7 +104,9 @@ const typingTimeoutRef = useRef(null);
     dispatch({ type: "chat/addMessage", payload: msg });
 
     setMessage("");
-    setPreviewData(null);
+  setPreviewData(null);
+  setShowPreview(false);      
+  setIsPreviewLoading(false); 
   };
 
   // =========================

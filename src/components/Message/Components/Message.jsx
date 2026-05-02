@@ -98,6 +98,7 @@ export function Messaging({ slectedFriends, onBack }) {
   const prevMsgCountRef = useRef(0);
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const navigate = useNavigate();
+  const textareaRef = useRef(null);
   const chat = useChatSystem({
     chatId: slectedFriends.chatId,
     friendId: slectedFriends._id,
@@ -425,6 +426,36 @@ setChatUnread((prev) => ({
   }
 }, [messages]);
 
+const MAX_HEIGHT = 120;
+
+const handleChange = (e) => {
+  const el = textareaRef.current;
+  if (!el) return;
+
+  el.style.height = "auto";
+
+  const newHeight = Math.min(el.scrollHeight, MAX_HEIGHT);
+  el.style.height = newHeight + "px";
+
+  el.style.overflowY =
+    el.scrollHeight > MAX_HEIGHT ? "auto" : "hidden";
+
+  chat.handleInputChange(e.target.value);
+};
+
+const handleSend = () => {
+  chat.sendText();
+
+  // 🔥 reset textarea
+  if (textareaRef.current) {
+    textareaRef.current.style.height = "auto";
+    textareaRef.current.style.overflowY = "hidden";
+  }
+
+  // 🔥 clear preview
+  chat.setShowPreview(false);
+  chat.setPreviewData(null);
+};
   return (
     <>
       <div
@@ -892,7 +923,10 @@ setChatUnread((prev) => ({
 
           <form
             id="inputforChat"
-            onSubmit={(e) => e.preventDefault()} // ❌ disable default submit
+            onSubmit={(e) => {
+    e.preventDefault(); // ✅ STOP default submit
+    handleSend();       // ✅ CONTROLLED send
+  }}
             className="flex items-center gap-2 bg-white dark:bg-gray-700 p-2 rounded-full"
           >
 
@@ -965,6 +999,7 @@ setChatUnread((prev) => ({
                       setTimeout(() => {
                         chat.sendAudio();        // 🔥 then send
                       }, 200);                   // small buffer for blob
+                     
                     }}
                     className="text-blue-500"
                   >
@@ -1017,13 +1052,23 @@ setChatUnread((prev) => ({
               // 💬 NORMAL MODE
               // =========================
               <>
-                <input
-                  type="text"
+            <div className="flex items-end gap-2 w-full">
+                <textarea
+                  ref={textareaRef}
                   value={chat.message}
-                  onChange={(e) => chat.handleInputChange(e.target.value)}
-                  className="flex-1 px-3 py-2 outline-none bg-transparent text-sm font-semibold text-white"
+                  onChange={handleChange}
+                  onKeyDown={(e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSend(); // ✅ send message
+    }
+  }}
                   placeholder="Write a message..."
+                  rows={1}
+                  className="flex-1 px-10 py-2 outline-none bg-transparent text-sm resize-none overflow-hidden w-full text-white font-semibold"
+                  style={{ whiteSpace: "pre-wrap", scrollbarWidth: 'none' }}
                 />
+            </div>
 
                 {/* FILE */}
                 <label className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 cursor-pointer">
@@ -1050,7 +1095,7 @@ setChatUnread((prev) => ({
                 {/* SEND */}
                 <button
                   type="submit"
-                  onClick={chat.sendText}
+                  
                   className="flex items-center gap-2 bg-blue-500 px-4 py-2 rounded-full text-white"
                 >
                   <i className="fa-solid fa-paper-plane"></i>
