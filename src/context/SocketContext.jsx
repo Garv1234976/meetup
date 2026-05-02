@@ -477,6 +477,21 @@ newSocket.on("broadcast_deleted", ({ messageId, channelId }) => {
   });
 });
 
+
+newSocket.on("added_to_channel", ({ channelId }) => {
+  console.log("🔥 Added to channel:", channelId);
+
+  // ✅ join instantly (THIS IS THE FIX)
+  newSocket.emit("join_channel", { channelId });
+
+  // 🔥 optional: preload messages
+  window.dispatchEvent(
+    new CustomEvent("channel-added", {
+      detail: { channelId },
+    })
+  );
+});
+
     return () => {
       newSocket.off("new_friend_added");
       newSocket.disconnect();

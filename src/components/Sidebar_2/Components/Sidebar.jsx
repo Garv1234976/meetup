@@ -128,6 +128,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey, setIsChatOpen }) {
   const [friendsOnly, setFriendsOnly] = useState([]);
   const [noFriendModal, setNoFriendModal] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate()
   const location = useLocation();
 
@@ -191,7 +192,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey, setIsChatOpen }) {
         const friends = data?.friends || [];
         const myChannel = data?.myChannel || [];
         const joinChannel = data?.joinChannel || [];
-
+        
         setFriendsOnly(friends);
         // channel merge
         const allChannel = [...myChannel, ...joinChannel].map((c) => ({
@@ -208,7 +209,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey, setIsChatOpen }) {
         // merged both
 
         const mergedChannelAndAllfriends = [...allfriends, ...allChannel];
-
+        
         // sorting
         mergedChannelAndAllfriends.sort((a, b) => {
           const aTime = a.lastMessageAt ? new Date(a.lastMessageAt) : new Date(0);
@@ -223,7 +224,9 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey, setIsChatOpen }) {
       })
       .catch((err) => {
         console.log("Failed to fetch Friends", err);
-      });
+      }).finally(() => {
+        setLoading(false);
+      })
   }, [token]);
 
   function handleFriendSelect(friend) {
@@ -468,15 +471,42 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey, setIsChatOpen }) {
           style={{ scrollbarGutter: "stable" }}
         >
           {/* <AnimatePresence> */}
-          {filteredChatList.length === 0 ? (
+          {loading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="px-5 py-2 flex items-start justify-between mb-1 rounded-sm animate-pulse"
+                >
+                  {/* LEFT SIDE */}
+                  <div className="flex gap-2">
+                    {/* avatar */}
+                    <div className="w-10 h-10 rounded-full bg-gray-200" />
+
+                    {/* name + message */}
+                    <div className="flex flex-col gap-2">
+                      <div className="w-24 h-3 bg-gray-200 rounded" />
+                      <div className="w-16 h-3 bg-gray-200 rounded" />
+                    </div>
+                  </div>
+
+                  {/* RIGHT SIDE */}
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="w-10 h-3 bg-gray-200 rounded" />
+                    <div className="w-6 h-6 bg-gray-200 rounded-full" />
+                  </div>
+                </div>
+              ))
+          ) :
+            filteredChatList.length === 0 ? (
             <div className="flex items-center justify-center py-3 ">
               <div onClick={() => setOpenInvite(true)} className="bg-blue-500 flex items-end gap-5 px-3 py-1 rounded-md mt-50 cursor-pointer">
                 <i className="fa-solid fa-person-circle-plus text-xl text-white"></i>
                 <span className="flex text-white text-sm font-semibold">Add Friend</span>
               </div>
             </div>
-          ) : ''}
-          {filteredChatList.map((friend, i) => (
+            )
+           : (
+            filteredChatList.map((friend, i) => (
             <motion.div
               id={`friend-${friend._id}`}
               key={i}
@@ -568,12 +598,6 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey, setIsChatOpen }) {
 
                 </span>
                 <span></span>
-                {/* {!friend.isChannel && chatUnread?.[friend._id] > 0 && (
-  <span className="bg-red-500 text-white text-xs px-2 font-semibold rounded-full mt-1">
-    {chatUnread?.[friend._id] > 99 ? "99+" : chatUnread?.[friend._id]}
-  </span>
-)} */}
-
                 {!friend.isChannel && (chatUnread?.[friend.chatId] || 0) > 0 && (
                   <span className="bg-red-500 text-white text-xs px-2 font-semibold rounded-full mt-1">
                     {(chatUnread?.[friend.chatId] || 0) > 99
@@ -583,7 +607,11 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey, setIsChatOpen }) {
                 )}
               </div>
             </motion.div>
-          ))}
+          ))
+           )
+          }
+          
+  
           {/* </AnimatePresence> */}
         </div>
       </div>

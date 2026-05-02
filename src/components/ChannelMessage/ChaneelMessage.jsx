@@ -9,6 +9,7 @@ import { useNavigate } from "react-router-dom";
 
 import { createClient } from "@supabase/supabase-js";
 import QRCode from "react-qrcode-logo";
+import AddMembersModal from "../../Modal/AddMembersModal";
 
 function generateInviteLink(channel) {
   const payload = {
@@ -85,8 +86,9 @@ const MembersSkeleton = () => (
 
 export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const { user } = useAuth();
-  const channel = fullchannelobject;
-
+  const channel = fullchannelobject; 
+  // console.log(JSON.stringify(fullchannelobject));
+  
   const BroadCastChannel = channel.isBroadcast
 
   const { socket, isReady, channelMessages, channelPinned, setActiveChannel, channelUnread, setChannelUnread, channelOnline, setChannelMessages, setChannelPinned, deleteMessageforChannelnBoradCast } = useSocket();
@@ -149,6 +151,12 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const chunksRef = useRef([]);
   const startTimeRef = useRef(0);
   const qrRef = useRef(null);
+  const channelRef = useRef(channel);
+  const [showAddMembers, setShowAddMembers] = useState(false);
+  useEffect(() => {
+  channelRef.current = channel;
+}, [channel]);
+  
   useEffect(() => {
     setActiveChannel(channelid);
 
@@ -352,9 +360,7 @@ const handleSendMessage = () => {
 
 
 
-
-  useEffect(() => {
-    const loadChannel = async () => {
+const loadChannel = async () => {
       try {
         const res = await fetch(
           `${import.meta.env.VITE_BACK_DEV_API}/channels/${channelid}`,
@@ -372,7 +378,6 @@ const handleSendMessage = () => {
           ...prev,
           [channelid]: data.messages || [],
         }));
-
         // ✅ pinned
         setChannelPinned((prev) => ({
           ...prev,
@@ -389,7 +394,7 @@ const handleSendMessage = () => {
         console.log("Hydration failed");
       }
     };
-
+  useEffect(() => {
     if (channelid) {
       loadChannel();
     }
@@ -407,7 +412,8 @@ const handleSendMessage = () => {
       );
 
       const data = await res.json();
-
+      
+        console.log(data);
       if (!res.ok) return;
       setLoadingMembers(true);
       setCreatorBio(data.creator);
@@ -420,8 +426,6 @@ const handleSendMessage = () => {
       console.log("Hydration failed");
     }
   }
-
-
 
 
   useEffect(() => {
@@ -823,6 +827,7 @@ See you inside! 🚀
   }
 };
 
+
   return (
     <>
       <AnimatePresence>
@@ -863,7 +868,7 @@ See you inside! 🚀
                   </div>
 
                   {BroadCastChannel === true ? (
-                    channel?.totalSubscribers + "  Recipients"
+                    channel?.broadcastRecipients.length + "  Recipients"
                   ) : (
                     <span className="text-sm text-gray-500">
                       {channel?.totalSubscribers} subscribers
@@ -1636,13 +1641,24 @@ See you inside! 🚀
                   </span>
 
                   <span className="text-sm text-gray-500">
-                    {channel?.totalSubscribers} subscribers
+                    {BroadCastChannel === true ? (channel?.broadcastRecipients.length + " Recipients"): (channel?.totalSubscribers + " subscribers")}
                   </span>
                 </div>
                 <div className="flex items-center flex-col gap-2">
-                  <div>
-                    <span className="font-semibold  border-blue-500 border-2 px-3 rounded-2xl">Add Members</span>
-                  </div>
+                <div>
+                  <button
+                    onClick={() => setShowAddMembers(true)}
+                    className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition"
+                  >
+                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                      <i className="fa-solid fa-plus text-sm"></i>
+                    </div>
+                    <span className="text-sm font-medium text-gray-700">
+                      Add Members
+                    </span>
+                  </button>
+                </div>
+                  or
                 <div
                     id=""
                     ref={qrRef}
@@ -2071,7 +2087,19 @@ See you inside! 🚀
           </motion.div>
         )}
       </AnimatePresence>
-
+        {showAddMembers && (
+  <AddMembersModal
+    channelId={channelid}
+          existingMembers={
+    channel.isBroadcast
+      ? channel.broadcastRecipients
+      : channel.subscribers
+  }
+    onClose={() => {
+  setShowAddMembers(false);
+}}
+  />
+)}
     </>
   );
 }

@@ -170,3 +170,14 @@
     left: 125%;
   }
 }
+
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: 200px 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #eee, #f5f5f5, #eee);
+  background-size: 400px 100%;
+  animation: shimmer 1.2s infinite;
+}
