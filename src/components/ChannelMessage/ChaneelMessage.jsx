@@ -1135,7 +1135,7 @@ See you inside! 🚀
                       )}
 
                       {/* MESSAGE TEXT */}
-                      <span className="break-all">{msg.text}</span>
+                      <span className="break-words" style={{whiteSpace: 'pre-wrap'}}>{msg.text}</span>
                       {msg.uploading && (
                         <motion.div
                           initial={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -1423,8 +1423,8 @@ See you inside! 🚀
                       ? "Type a message..."
                       : "Only admin can send messages"
                   }
-                  className="flex-1 bg-transparent resize-none outline-none text-sm leading-5 max-h-[120px] overflow-y-auto self-end"
-                  style={{ minHeight: "30px", scrollbarWidth: 'none' }}
+                  className="flex-1 bg-transparent resize-none outline-none text-sm leading-5 max-h-[120px] overflow-y-auto self-end font-semibold"
+                  style={{ whiteSpace: "pre-wrap",minHeight: "30px", scrollbarWidth: 'none' }}
                   onKeyDown={(e) => {
                     if (!isAdmin) return;
 

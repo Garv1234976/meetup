@@ -1058,11 +1058,11 @@ const handleSend = () => {
                   value={chat.message}
                   onChange={handleChange}
                   onKeyDown={(e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSend(); // ✅ send message
-    }
-  }}
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend(); // ✅ send message
+                  }
+                }}
                   placeholder="Write a message..."
                   rows={1}
                   className="flex-1 px-10 py-2 outline-none bg-transparent text-sm resize-none overflow-hidden w-full text-white font-semibold"
