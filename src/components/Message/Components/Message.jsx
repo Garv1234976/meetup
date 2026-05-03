@@ -79,7 +79,7 @@ export function Messaging({ slectedFriends, onBack }) {
   const dispatch = useDispatch();
   const messages = useSelector((state) => state.chat.messages);
 
-  
+
 
   const { showTourPrompt, closeTourPrompt, startTourByType, resetSteps, registerStep, startTour } = useTour();
 
@@ -99,17 +99,21 @@ export function Messaging({ slectedFriends, onBack }) {
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const navigate = useNavigate();
   const textareaRef = useRef(null);
+
+
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [replyMessage, setReplyMessage] = useState(null);
+  const [showAudioModal, setShowAudioModal] = useState(false);
   const chat = useChatSystem({
     chatId: slectedFriends.chatId,
     friendId: slectedFriends._id,
     dispatch,
+    replyMessage,
+    setReplyMessage
   });
-
-
-  const [showAudioModal, setShowAudioModal] = useState(false);
-
   const mediaRecorderRef = useRef(null);
   const chunksRef = useRef([]);
+  const menuRef = useRef(null);
   // Fetch messages on chat change
   // useEffect(() => {
   //   resetSteps();
@@ -133,6 +137,7 @@ export function Messaging({ slectedFriends, onBack }) {
   // },[])
 
 
+
   useEffect(() => {
     if (!slectedFriends?.chatId) return;
 
@@ -147,10 +152,10 @@ export function Messaging({ slectedFriends, onBack }) {
 
     setActiveChat(slectedFriends.chatId);
     clearUnread(slectedFriends.chatId);
-setChatUnread((prev) => ({
-  ...prev,
-  [slectedFriends.chatId]: 0,
-}));
+    setChatUnread((prev) => ({
+      ...prev,
+      [slectedFriends.chatId]: 0,
+    }));
     return () => setActiveChat(null);
   }, [slectedFriends?.chatId]);
 
@@ -419,43 +424,58 @@ setChatUnread((prev) => ({
   };
 
   useEffect(() => {
-  if (messages.length === 0) {
-    setSuggestText([
-      "Hey 😊 nice to connect with you!",
-    ]);
-  }
-}, [messages]);
+    if (messages.length === 0) {
+      setSuggestText([
+        "Hey 😊 nice to connect with you!",
+      ]);
+    }
+  }, [messages]);
 
-const MAX_HEIGHT = 120;
+  const MAX_HEIGHT = 120;
 
-const handleChange = (e) => {
-  const el = textareaRef.current;
-  if (!el) return;
+  const handleChange = (e) => {
+    const el = textareaRef.current;
+    if (!el) return;
 
-  el.style.height = "auto";
+    el.style.height = "auto";
 
-  const newHeight = Math.min(el.scrollHeight, MAX_HEIGHT);
-  el.style.height = newHeight + "px";
+    const newHeight = Math.min(el.scrollHeight, MAX_HEIGHT);
+    el.style.height = newHeight + "px";
 
-  el.style.overflowY =
-    el.scrollHeight > MAX_HEIGHT ? "auto" : "hidden";
+    el.style.overflowY =
+      el.scrollHeight > MAX_HEIGHT ? "auto" : "hidden";
 
-  chat.handleInputChange(e.target.value);
-};
+    chat.handleInputChange(e.target.value);
+  };
 
-const handleSend = () => {
-  chat.sendText();
+  const handleSend = () => {
+    chat.sendText();
 
-  // 🔥 reset textarea
-  if (textareaRef.current) {
-    textareaRef.current.style.height = "auto";
-    textareaRef.current.style.overflowY = "hidden";
-  }
+    // 🔥 reset textarea
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.overflowY = "hidden";
+    }
 
-  // 🔥 clear preview
-  chat.setShowPreview(false);
-  chat.setPreviewData(null);
-};
+    // 🔥 clear preview
+    // chat.setShowPreview(false);
+    // chat.setPreviewData(null);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setOpenMenuId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
     <>
       <div
@@ -564,7 +584,7 @@ const handleSend = () => {
                           >
                             {/* EMOJI BUTTON (HOVER ONLY) */}
                             <div
-                              className={`relative transition-all duration-200 cursor-pointer ${hoveredMessageId === msg._id
+                              className={`sticky top-0 transition-all duration-200 cursor-pointer ${hoveredMessageId === msg._id
                                 ? "opacity-100 "
                                 : "opacity-100 "
                                 } ${isFromFriend ? "ml-1" : "mr-1"}`}
@@ -614,40 +634,107 @@ const handleSend = () => {
                             </div>
 
                             {/* MESSAGE BUBBLE */}
-                            {!msg.isDeleted === true ?  (
-                                <button
-    onClick={() => chat.deleteMessage(msg)}
-    className={`cursor-pointer  ${
-      isFromFriend ? "ml-1" : "mr-1"
-    } w-7 h-7 flex items-center justify-center rounded-full 
+                            {!msg.isDeleted === true ? (
+                              <button
+                                onClick={() => chat.deleteMessage(msg)}
+                                className={` sticky top-0 cursor-pointer px-2 ${isFromFriend ? "ml-1" : "mr-1"
+                                  } w-7 h-7 flex items-center justify-center rounded-full 
     bg-white/70 backdrop-blur shadow-sm 
     active:scale-90 transition`}
-  >
-    <i className="fa-solid fa-trash text-[10px] text-red-500"></i>
-  </button>
+                              >
+                                <i className="fa-solid fa-trash text-[10px] text-red-500"></i>
+                              </button>
                             ) : ""}
-                            
+
                             <motion.div
                               initial={{ opacity: 0, y: 10, scale: 0.95 }}
                               animate={{ opacity: 1, y: 0, scale: 1 }}
                               transition={{ duration: 0.2 }}
-                              className={`px-4 py-2 text-sm rounded-2xl shadow-md relative break-words whitespace-pre-wrap max-w-xl ${isFromFriend
-                                  ? "bg-white text-gray-800 rounded-tl-none"
-                                  : "bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-tr-none"
+                              className={`relative flex flex-col  px-4 py-2 text-sm rounded-2xl shadow-md  break-words whitespace-pre-wrap max-w-xl ${isFromFriend
+                                ? "bg-gray-600 text-white rounded-tl-xs"
+                                : "text-bla bg-[#caf0f8] rounded-tr-none"
                                 }`}
                             >
-                              
+                              <div
+                                className={`absolute top-3 w-3 h-3 rotate-45 
+                                ${isFromFriend
+                                    ? "left-0 -translate-x-1/2 bg-gray-600"
+                                    : "right-0 translate-x-1/2 bg-[#caf0f8]"
+                                  }`}
+                              ></div>
+                              {!msg.deleted && (
+                                <i
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenMenuId(openMenuId === msg._id ? null : msg._id)
+                                  }}
+                                  className={`fa-solid fa-chevron-down text-right text-sm cursor-pointer  sticky top-0 ${isFromFriend ? "text-white" : "text-black"
+                                    }`}
+                                ></i>
+                              )}
+                              {openMenuId === msg._id && (
+                                <motion.div
+                                  ref={menuRef}
+                                  initial={{ opacity: 0, scale: 0.7, y: -10 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.7, y: -10 }}
+                                  transition={{ duration: 0.2, ease: "easeOut" }}
+                                  // className="absolute  px-2 py-2 flex flex-col gap-2 rounded-md bg-gray-300 w-24 shadow-lg z-50"
+                                  className={`sticky top-0 ${isFromFriend ? "" : ""} px-2 py-2 flex flex-col gap-1 
+rounded-xl bg-white dark:bg-gray-800 
+border border-gray-200 dark:border-gray-700 
+shadow-xl w-28 z-50`}
+                                >
+                                  <div
+                                    onClick={() => {
+                                      setReplyMessage(msg);
+                                      setOpenMenuId(null);
+                                    }}
+                                    className="flex items-center gap-2 text-sm px-2 py-1.5 cursor-pointer rounded-md 
+hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                                    <i className="fa-solid fa-reply text-xs text-blue-500"></i>
+                                    <span className="text-gray-700 dark:text-gray-200 font-medium">Reply</span>
+                                  </div>
+
+                                  <div
+                                    onClick={() => { navigator.clipboard.writeText(msg.text); setOpenMenuId(null); }}
+                                    className="flex items-center gap-2 text-sm px-2 py-1.5 cursor-pointer rounded-md 
+hover:bg-gray-100 dark:hover:bg-gray-700 transition">
+                                    <i className="fa-solid fa-copy text-xs text-green-500" ></i>
+                                    <span className="text-gray-700 dark:text-gray-200 font-medium">Copy</span>
+                                  </div>
+                                </motion.div>
+                              )}
                               {/* TEXT */}
                               {msg?.broadcastId ? (
                                 <pre className="whitespace-pre-wrap break-words font-sans">
                                   {htmlToText(msg.text)}
                                 </pre>
                               ) : (
-                                <span className="font-semibold">
-                                  {msg.text}
-                                </span>
+                                <div className="flex flex-col gap-1 mt-1">
+
+                                  {/* 🔥 REPLY PREVIEW */}
+                                  {msg.replyText && !msg.deleted && (
+                                    <div className="px-2 py-1 rounded-md border-l-4 border-blue-500 
+    bg-black/10 dark:bg-white/10 max-w-full">
+
+                                      <div className="text-[10px] text-blue-500 font-semibold">
+                                        Reply
+                                      </div>
+
+                                      <div className="text-xs  dark:text-black font-semibold line-clamp-1">
+                                        {msg.replyText}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* 🔥 MAIN MESSAGE */}
+                                  <span className="font-semibold text-sm">
+                                    {msg.text}
+                                  </span>
+
+                                </div>
                               )}
-                              
 
                               {msg.file && !msg.fileType?.startsWith("audio") && (
                                 <motion.div
@@ -713,7 +800,7 @@ const handleSend = () => {
                               {/* TIME */}
                               <div
                                 className={`text-[10px] mt-1 ${isFromFriend
-                                  ? "text-gray-500"
+                                  ? "text-gray-100"
                                   : "text-blue-100"
                                   } text-right`}
                               >
@@ -886,47 +973,48 @@ const handleSend = () => {
         )}
 
         <footer
-          className="sticky bottom-0 w-full px-4 py-3 border-t  border-gray-100 dark:border-gray-700 "
-          style={{ backgroundColor: Theme.thirdBackgroundColor }}
+          className="sticky bottom-0 w-full px-4 py-3  border-gray-100 dark:border-gray-700 "
+        // style={{ backgroundColor: Theme.thirdBackgroundColor }}
         >
-         {messages.length === 0 ? ( <div className="flex flex-col items-center mb-2 gap-2">
 
-  {/* 🔥 HEADLINE */}
-  <div className="text-xs text-gray-500 font-medium">
-    👋 Start the conversation
-  </div>
+          {messages.length === 0 ? (<div className="flex flex-col items-center mb-2 gap-2">
 
-  {/* 🔥 SUGGESTIONS */}
-  <div className="flex gap-2 flex-wrap justify-center">
-    {suggestText.slice(0, 3).map((suggest, index) => (
-      <div
-        key={index}
-        onClick={() => {
-          isSelectingRef.current = true;
+            {/* 🔥 HEADLINE */}
+            <div className="text-xs text-gray-500 font-medium">
+              👋 Start the conversation
+            </div>
 
-          chat.setMessage(suggest);
-          chat.sendText();
+            {/* 🔥 SUGGESTIONS */}
+            <div className="flex gap-2 flex-wrap justify-center">
+              {suggestText.slice(0, 3).map((suggest, index) => (
+                <div
+                  key={index}
+                  onClick={() => {
+                    isSelectingRef.current = true;
 
-          setSuggestText([]);
-        }}
-        className="px-4 py-2 rounded-full text-white text-sm font-semibold cursor-pointer 
+                    chat.setMessage(suggest);
+                    chat.sendText();
+
+                    setSuggestText([]);
+                  }}
+                  className="px-4 py-2 rounded-full text-white text-sm font-semibold cursor-pointer 
         bg-gradient-to-r from-blue-500 to-indigo-500 
         shadow-md active:scale-90 transition hover:shadow-lg"
-      >
-        {suggest}
-      </div>
-    ))}
-  </div>
+                >
+                  {suggest}
+                </div>
+              ))}
+            </div>
 
-</div>) : ""}
-         
+          </div>) : ""}
+
 
           <form
             id="inputforChat"
             onSubmit={(e) => {
-    e.preventDefault(); // ✅ STOP default submit
-    handleSend();       // ✅ CONTROLLED send
-  }}
+              e.preventDefault(); // ✅ STOP default submit
+              handleSend();       // ✅ CONTROLLED send
+            }}
             className="flex items-center gap-2 bg-white dark:bg-gray-700 p-2 rounded-full"
           >
 
@@ -999,7 +1087,7 @@ const handleSend = () => {
                       setTimeout(() => {
                         chat.sendAudio();        // 🔥 then send
                       }, 200);                   // small buffer for blob
-                     
+
                     }}
                     className="text-blue-500"
                   >
@@ -1052,23 +1140,48 @@ const handleSend = () => {
               // 💬 NORMAL MODE
               // =========================
               <>
-            <div className="flex items-end gap-2 w-full">
-                <textarea
-                  ref={textareaRef}
-                  value={chat.message}
-                  onChange={handleChange}
-                  onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend(); // ✅ send message
-                  }
-                }}
-                  placeholder="Write a message..."
-                  rows={1}
-                  className="flex-1 px-10 py-2 outline-none bg-transparent text-sm resize-none overflow-hidden w-full text-white font-semibold"
-                  style={{ whiteSpace: "pre-wrap", scrollbarWidth: 'none' }}
-                />
-            </div>
+                {/* <div className="absolute -top-5 left-10 dark:bg-gray-700  rounded-t-lg
+              px-2 py-1 h-20 -z-10"><span className="border-l-3 px-2 border-l-blue-500 text-white rounded-l-md break-words">Reply meg</span></div> */}
+                {replyMessage && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute -top-10 w-[89%] left-10 mb-2 bg-gray-100 h-20 -z-10 dark:bg-gray-700 rounded-t-md px-3 py-2 border-l-4 border-blue-500 "
+                  >
+
+                    <button
+                      onClick={() => setReplyMessage(null)}
+                      className="absolute right-2 top-1 text-xs  bg-red-500 px-2 rounded-sm cursor-pointer"
+                    >
+                      <i className="fa-solid fa-x text-white"></i>
+                    </button>
+
+                    {/* reply text */}
+                    <div className="text-xs text-gray-500">Replying to</div>
+
+                    <div className="text-sm text-gray-800 dark:text-gray-200 font-medium line-clamp-1">
+                      {replyMessage.text}
+                    </div>
+                  </motion.div>
+                )}
+                <div className="flex  items-end gap-2 w-full">
+                  <textarea
+                    ref={textareaRef}
+                    value={chat.message}
+                    onChange={handleChange}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend(); // ✅ send message
+                      }
+                    }}
+                    placeholder="Write a message..."
+                    rows={1}
+                    className="flex-1 px-10 py-2 outline-none bg-transparent text-sm resize-none overflow-hidden w-full text-white font-semibold"
+                    style={{ whiteSpace: "pre-wrap", scrollbarWidth: 'none' }}
+                  />
+                </div>
 
                 {/* FILE */}
                 <label className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-200 hover:bg-gray-300 cursor-pointer">
@@ -1095,7 +1208,7 @@ const handleSend = () => {
                 {/* SEND */}
                 <button
                   type="submit"
-                  
+
                   className="flex items-center gap-2 bg-blue-500 px-4 py-2 rounded-full text-white"
                 >
                   <i className="fa-solid fa-paper-plane"></i>
