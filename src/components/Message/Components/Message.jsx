@@ -609,7 +609,7 @@ export function Messaging({ slectedFriends, onBack }) {
                         >
                           {/* MESSAGE ROW */}
                           <div
-                            className={`flex items-center max-w-[80%] md:max-w-[65%] ${isFromFriend ? "flex-row-reverse" : "flex-row"
+                            className={`flex items-center max-w-[100%] md:max-w-[65%] ${isFromFriend ? "flex-row-reverse" : "flex-row"
                               }`}
                           >
                             {/* EMOJI BUTTON (HOVER ONLY) */}
@@ -759,7 +759,7 @@ hover:bg-gray-100 dark:hover:bg-gray-700 transition">
                                   )}
 
                                   {/* 🔥 MAIN MESSAGE */}
-                                  <span className="font-semibold text-sm">
+                                  <span className="font-semibold text-xs sm:text-sm">
                                     {msg.text}
                                   </span>
 
@@ -803,7 +803,7 @@ hover:bg-gray-100 dark:hover:bg-gray-700 transition">
                                   target="_blank"
                                   initial={{ opacity: 0, scale: 0.95 }}
                                   animate={{ opacity: 1, scale: 1 }}
-                                  className="block mt-2 w-80 bg-white rounded-xl overflow-hidden shadow border-l-4 border-blue-500 "
+                                  className="block mt-2 w-full sm:w-80 bg-white rounded-xl overflow-hidden shadow border-l-4 border-blue-500 "
                                 >
                                   {msg.preview.images?.[0] && (
                                     <img
@@ -1002,8 +1002,30 @@ hover:bg-gray-100 dark:hover:bg-gray-700 transition">
           </motion.div>
         )}
 
+        {replyMessage && (
+          <div className="px-5"><motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="  w-full flex justify-between items-center  bg-gray-100  dark:bg-gray-700 rounded-t-md px-3 py-2 border-l-4 border-blue-500 "
+          >
+            <div className="flex flex-col">
+              <div className="text-xs text-gray-500">Replying to</div>
+
+              <div className="text-sm text-gray-800 dark:text-gray-200 font-medium line-clamp-1">
+                {replyMessage.text}
+              </div>
+            </div>
+            <button
+              onClick={() => setReplyMessage(null)}
+              className=" flex items-center text-xs  bg-red-500 px-2 py-1 rounded-sm cursor-pointer"
+            >
+              <i className="fa-solid fa-x text-white"></i>
+            </button>
+          </motion.div></div>
+        )}
         <footer
-          className="flex-shrink-0  w-full px-4 py-3  border-gray-100 dark:border-gray-700 "
+          className="flex-shrink-0  w-full px-4 pb-2  border-gray-100 dark:border-gray-700 "
         // style={{ backgroundColor: Theme.thirdBackgroundColor }}
         >
 
@@ -1172,29 +1194,7 @@ hover:bg-gray-100 dark:hover:bg-gray-700 transition">
               <>
                 {/* <div className="absolute -top-5 left-10 dark:bg-gray-700  rounded-t-lg
               px-2 py-1 h-20 -z-10"><span className="border-l-3 px-2 border-l-blue-500 text-white rounded-l-md break-words">Reply meg</span></div> */}
-                {replyMessage && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="absolute -top-10 w-[89%] left-10 mb-2 bg-gray-100 h-20 -z-10 dark:bg-gray-700 rounded-t-md px-3 py-2 border-l-4 border-blue-500 "
-                  >
-
-                    <button
-                      onClick={() => setReplyMessage(null)}
-                      className="absolute right-2 top-1 text-xs  bg-red-500 px-2 rounded-sm cursor-pointer"
-                    >
-                      <i className="fa-solid fa-x text-white"></i>
-                    </button>
-
-                    {/* reply text */}
-                    <div className="text-xs text-gray-500">Replying to</div>
-
-                    <div className="text-sm text-gray-800 dark:text-gray-200 font-medium line-clamp-1">
-                      {replyMessage.text}
-                    </div>
-                  </motion.div>
-                )}
+              
                 <div className="flex  items-end gap-2 w-full">
                   <textarea
                     ref={textareaRef}
@@ -1217,7 +1217,7 @@ hover:bg-gray-100 dark:hover:bg-gray-700 transition">
                         }}
                     placeholder="Write a message..."
                     rows={1}
-                    className="flex-1 px-10 py-2 outline-none bg-transparent text-sm resize-none overflow-hidden w-full text-white font-semibold"
+                    className="flex-1 px-10 py-2 outline-none bg-transparent text-sm resize-none overflow-hidden w-full text-white font-semibold "
                     style={{ whiteSpace: "pre-wrap", scrollbarWidth: 'none' }}
                   />
                 </div>
