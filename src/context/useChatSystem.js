@@ -103,9 +103,6 @@
         timestamp: new Date().toISOString(),
       };
 
-      console.log(msg
-
-      );
       socket.emit("send_message", msg);
       dispatch({ type: "chat/addMessage", payload: msg });
 

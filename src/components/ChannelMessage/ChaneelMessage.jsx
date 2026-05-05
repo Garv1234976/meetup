@@ -157,6 +157,18 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   channelRef.current = channel;
 }, [channel]);
   
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [activeSearchIndex, setActiveSearchIndex] = useState(0);
+  const [showMention, setShowMention] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionList, setMentionList] = useState([]);
+  const [showPublicModal, setShowPublicModal] = useState(false);
+  const [isChatUnlocked, setIsChatUnlocked] = useState(false);
+
+  const [fromUser, setFromUser] = useState(user);
+  const [toAudience, setToAudience] = useState("all"); // all | subscribers | selected
   useEffect(() => {
     setActiveChannel(channelid);
 
@@ -289,6 +301,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
     const value = e.target.value;
     setMessage(value);
 
+
     const match = value.match(/(https?:\/\/[^\s]+)/);
 
     if (match && socket) {
@@ -307,8 +320,34 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
       setGetPreviewData(null);
       setIsPreviewLoading(false);
     }
+
+    const mentionMatch = value.match(/(?:^|\s)@([^\s]*)$/);
+
+    if(mentionMatch){
+      const query = mentionMatch[1].toLowerCase();
+      setMentionQuery(query);
+      setShowMention(true);
+      const source = BroadCastChannel ? channel.broadcastRecipients : members;
+      const filtered = source.filter((user) =>
+        user.name.toLowerCase().includes(query)
+      );
+
+      setMentionList(filtered);
+    }else{
+      setShowMention(false)
+    }
   };
 
+  const handleSelectMention = (user) => {
+    const newText = message.replace(/(?:^|\s)@\S*$/, ` @${user.name} `);
+
+    setMessage(newText);
+    setShowMention(false);
+
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  };
 
 const handleSendMessage = () => {
   if (!message.trim() || !socket) return;
@@ -413,7 +452,6 @@ const loadChannel = async () => {
 
       const data = await res.json();
       
-        console.log(data);
       if (!res.ok) return;
       setLoadingMembers(true);
       setCreatorBio(data.creator);
@@ -827,7 +865,26 @@ See you inside! 🚀
   }
 };
 
+  useEffect(() => {
+    if (!searchResults.length) return;
 
+    const msg = searchResults[activeSearchIndex];
+    if (!msg) return;
+
+    const el = document.getElementById(`msg-${msg.index}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [activeSearchIndex, searchResults]);
+
+
+  const escapeRegExp = (string) => {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  };
+
+  useEffect(() => {
+    loadMembers(); 
+  }, [channelid]);
   return (
     <>
       <AnimatePresence>
@@ -912,7 +969,7 @@ See you inside! 🚀
 
               </div>
               <div className="flex items-center gap-4">
-                <i className="fa-solid fa-magnifying-glass text-lg text-blue-400 hover:text-black cursor-pointer h-10 pt-3 "></i>
+                <i onClick={() => setShowSearch(true)} className="fa-solid fa-magnifying-glass text-lg text-blue-400 hover:text-black cursor-pointer h-10 pt-3"></i>
                 <i onClick={() => {
                   setShowInfo(true);
                   loadMembers();
@@ -921,7 +978,81 @@ See you inside! 🚀
               </div>
             </div>
           </header>
+          {showSearch && (
+            <motion.div
+              initial={{ y: -20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
+              className=" w-full grid grid-cols-1 sm:grid-cols-2  justify-items-end z-50 px-3 py-2 shadow-md  items-center gap-2"
+              style={{background: Theme.secondaryBackgroundColor}}
+            >
+              <input
+                value={searchText}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setSearchText(value);
+                  if(!value.trim()){
+                    setSearchResults([]);
+                    setActiveSearchIndex(0)
+                    return;
+                  }
 
+                
+                  const results = messages
+                    .map((msg, index) => ({
+                      ...msg,
+                      index,
+                    }))
+                    .filter((msg) =>
+                      msg.text?.toLowerCase().includes(value.toLowerCase())
+                    );
+
+                  setSearchResults(results);
+                  setActiveSearchIndex(0);
+                }}
+                placeholder="Search messages..."
+                className="w-full px-2 py-1 border rounded outline-none border-none bg-white"
+              />
+
+
+              <div className="flex items-center justify-center gap-3">
+                <div className="text-xs text-gray-500 w-20">
+                  {searchText.trim() === ""
+                    ? ""
+                    : searchResults.length > 0
+                      ? `${activeSearchIndex + 1} / ${searchResults.length}`
+                      : "No results"}
+                </div>
+
+                <button
+                  onClick={() =>
+                    setActiveSearchIndex((prev) =>
+                      prev > 0 ? prev - 1 : searchResults.length - 1
+                    )
+                  }
+                  className="bg-gray-400 px-2 rounded-md cursor-pointer"
+                >
+                  <i className="fa-solid fa-up-long text-white"></i>
+                </button>
+
+                <button
+                  onClick={() =>
+                    setActiveSearchIndex((prev) =>
+                      prev < searchResults.length - 1 ? prev + 1 : 0
+                    )
+                  }
+                  className="bg-gray-400 px-2 rounded-md cursor-pointer"
+                >
+                  <i className="fa-solid fa-down-long text-white"></i>
+                </button>
+                <button onClick={() => setShowSearch(false)}
+                  className="bg-red-500 px-3 rounded-md"
+                >
+                  <i className="fa-solid fa-xmark font-semibold text-white cursor-pointer"></i>
+                </button>
+              </div>
+            </motion.div>
+          )}
 
           {pinnedMessages.length > 0 && (
             <motion.div className="absolute top-14 w-[100%] md:w-[62%] z-10 "
@@ -1135,7 +1266,28 @@ See you inside! 🚀
                       )}
 
                       {/* MESSAGE TEXT */}
-                      <span className="break-words" style={{whiteSpace: 'pre-wrap'}}>{msg.text}</span>
+                      <span className="break-words" style={{ whiteSpace: 'pre-wrap' }}> {searchText
+                        ? msg.text.split(new RegExp(`(${escapeRegExp(searchText)})`, "gi")).map((part, i) =>
+                          part.toLowerCase() === searchText.toLowerCase() ? (
+                            <span key={i} className="bg-yellow-300 text-black rounded px-1">
+                              {part}
+                            </span>
+                          ) : (
+                            part
+                          )
+                        )
+                        : msg.text.split(/(@[a-zA-Z0-9_]+(?:\s[a-zA-Z0-9_]+)*)/g).map((part, i) =>
+                          part.startsWith("@") ? (
+                            <span
+                              key={i}
+                              className="text-blue-600 font-semibold bg-blue-100 px-1 rounded"
+                            >
+                              {part}
+                            </span>
+                          ) : (
+                            part
+                          )
+                        ) }</span>
                       {msg.uploading && (
                         <motion.div
                           initial={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -1402,7 +1554,7 @@ See you inside! 🚀
               </div>
             </footer>
           ) : (
-            <footer className="p-3 border-t bg-white flex items-end gap-2 shrink-0">
+            <footer className="p-3 bg-white flex items-end gap-2 shrink-0">
 
               {/* INPUT CONTAINER */}
               <div
@@ -1411,6 +1563,28 @@ See you inside! 🚀
             `}
               >
 
+                  {showMention && mentionList.length > 0 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 20 }}
+                      className="absolute bottom-16 left-2 w-[90%] max-h-48  overflow-y-auto bg-white shadow-lg rounded-xl z-50"
+                    >
+                      {mentionList.map((user) => (
+                        <div
+                          key={user._id}
+                          onClick={() => handleSelectMention(user)}
+                          className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                        >
+                          <img
+                            src={user.picture || "/m.svg"}
+                            className="w-8 h-8 rounded-full"
+                          />
+                          <span className="text-sm font-medium">{user.name}</span>
+                        </div>
+                      ))}
+                    </motion.div>
+                  )}
                 {/* TEXTAREA */}
                 <textarea
                   ref={textareaRef}
@@ -1420,7 +1594,7 @@ See you inside! 🚀
                   rows={1}
                   placeholder={
                     isAdmin
-                      ? "Type a message..."
+                      ? "Type a message... or use @ to mention someone"
                       : "Only admin can send messages"
                   }
                   className="flex-1 bg-transparent resize-none outline-none text-sm leading-5 max-h-[120px] overflow-y-auto self-end font-semibold"
@@ -1621,7 +1795,10 @@ See you inside! 🚀
             >
               {/* HEADER */}
               <div className="p-4 border-b flex items-center justify-between">
-                <span className="font-semibold text-lg">Channel Info</span>
+                
+                <span className="font-semibold text-lg">
+                  {BroadCastChannel === true ? 'Broadcast Info' : 'Channel Info'}
+                  </span>
                 <i
                   onClick={() => setShowInfo(false)}
                   className="fa-solid fa-xmark cursor-pointer text-lg"
@@ -1630,7 +1807,9 @@ See you inside! 🚀
 
               {/* CONTENT */}
               <div className="p-4 flex flex-col gap-4 overflow-y-auto">
-
+                <div className="flex justify-end">
+                  <i className="fa-solid fa-gear text-lg md:text-sm text-right font-semibold px-2 py-1 cursor-pointer rounded-md text-white bg-gray-500"></i>
+                </div>
                 <div className="flex flex-col items-center gap-2">
                   <div className="w-20 h-20 rounded-full bg-blue-500 flex items-center justify-center text-white text-2xl">
                     <i className="fa-solid fa-bullhorn"></i>
@@ -1644,11 +1823,11 @@ See you inside! 🚀
                     {BroadCastChannel === true ? (channel?.broadcastRecipients.length + " Recipients"): (channel?.totalSubscribers + " subscribers")}
                   </span>
                 </div>
-                <div className="flex items-center flex-col gap-2">
-                <div>
+                <div className="cursor-pointer flex items-center flex-col gap-2">
+                <div className="">
                   <button
                     onClick={() => setShowAddMembers(true)}
-                    className="flex items-center gap-3 px-4 py-2 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition"
+                    className="flex cursor-pointer items-center gap-3 px-4 py-2 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition"
                   >
                     <div className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-600">
                       <i className="fa-solid fa-plus text-sm"></i>
@@ -1859,6 +2038,7 @@ See you inside! 🚀
                   </div>
                 </div> */}
               </div>
+              
             </motion.div>
           </>
         )}
@@ -2100,6 +2280,7 @@ See you inside! 🚀
 }}
   />
 )}
+  
     </>
   );
 }

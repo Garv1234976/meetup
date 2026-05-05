@@ -16,6 +16,7 @@ import { GetAllNotification } from "./Notification/GetAllNotification";
 import { ExplorePeople } from "./ExplorePeople/ExplorePeople";
 import { OnlinePanel } from "./Admin/Online";
 import { FriendRequest } from "./FriendRequest/FriendRequest";
+import ChannelSettings from "./ChannelSetting/ChannelSetting";
 export default function AppRoutes({ clientId }) {
   return (
     <Routes>
@@ -98,6 +99,14 @@ export default function AppRoutes({ clientId }) {
         element={
           <ProtectedRoute>
             <FriendRequest />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/channel-settings"
+        element={
+          <ProtectedRoute>
+            <ChannelSettings />
           </ProtectedRoute>
         }
       />

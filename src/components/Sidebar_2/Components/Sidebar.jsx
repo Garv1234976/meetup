@@ -182,6 +182,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey, setIsChatOpen }) {
 
 
   useEffect(() => {
+    setLoading(true); 
     fetch(`${import.meta.env.VITE_BACK_DEV_API}/chats`, {
       method: "GET",
       credentials: "include",
@@ -497,7 +498,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey, setIsChatOpen }) {
                 </div>
               ))
           ) :
-            filteredChatList.length === 0 ? (
+            friends.length === 0 ? (
             <div className="flex items-center justify-center py-3 ">
               <div onClick={() => setOpenInvite(true)} className="bg-blue-500 flex items-end gap-5 px-3 py-1 rounded-md mt-50 cursor-pointer">
                 <i className="fa-solid fa-person-circle-plus text-xl text-white"></i>

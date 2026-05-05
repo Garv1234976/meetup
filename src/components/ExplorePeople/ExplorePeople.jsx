@@ -272,7 +272,7 @@ export function ExplorePeople() {
                     {/* 🔥 SUGGESTIONS */}
                     <div
                     id="Normaluser"
-                     className="mt-5">
+                    className="mt-5">
                         <h3 className="text-sm sm:text-base font-semibold mb-3 px-1">
                             Suggested for you
                         </h3>
