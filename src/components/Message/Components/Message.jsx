@@ -449,17 +449,20 @@ export function Messaging({ slectedFriends, onBack }) {
   };
 
   const handleSend = () => {
+    if (!chat.message.trim()) return;
+
     chat.sendText();
 
-    // 🔥 reset textarea
+    // 🔥 KEEP FOCUS (CRITICAL)
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+
+    // 🔥 reset height
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
       textareaRef.current.style.overflowY = "hidden";
     }
-
-    // 🔥 clear preview
-    // chat.setShowPreview(false);
-    // chat.setPreviewData(null);
   };
 
   useEffect(() => {
@@ -475,15 +478,42 @@ export function Messaging({ slectedFriends, onBack }) {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+  useEffect(() => {
+    const setHeight = () => {
+      const viewport = window.visualViewport;
 
+      if (!viewport) return;
+
+      const height = viewport.height;
+      const offsetTop = viewport.offsetTop;
+
+      // 🔥 THIS IS THE FIX
+      const usableHeight = height + offsetTop;
+
+      document.documentElement.style.setProperty(
+        "--app-height",
+        `${usableHeight}px`
+      );
+    };
+
+    setHeight();
+
+    window.visualViewport?.addEventListener("resize", setHeight);
+    window.visualViewport?.addEventListener("scroll", setHeight); // 🔥 IMPORTANT
+
+    return () => {
+      window.visualViewport?.removeEventListener("resize", setHeight);
+      window.visualViewport?.removeEventListener("scroll", setHeight);
+    };
+  }, []);
   return (
     <>
       <div
-        className="w-[100%] h-[100dvh] flex flex-col relative"
-        style={{ backgroundColor: Theme.primaryBackgroundColor }}
+        className=" flex flex-col "
+        style={{ backgroundColor: Theme.primaryBackgroundColor, height: "var(--app-height)" }}
       >
         {/* Header */}
-        <header className="sticky top-0 left-0 right-0 bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center gap-3 z-10 border-b border-gray-100 dark:border-gray-700">
+        <header className="flex-shrink-0 bg-white dark:bg-gray-800 shadow-sm p-4 flex items-center gap-3 z-10 border-b border-gray-100 dark:border-gray-700">
           <i
             onClick={() => {
               onBack();
@@ -541,7 +571,7 @@ export function Messaging({ slectedFriends, onBack }) {
         </header>
 
         {/* Messages Container */}
-        <main className="flex-1 pt-4 pb-10 overflow-y-auto flex flex-col scrollbar-thin scrollbar-thumb-blue-300 dark:scrollbar-thumb-blue-600 scrollbar-track-transparent">
+        <main className="flex-1 pt-4  overflow-y-auto flex flex-col scrollbar-thin scrollbar-thumb-blue-300 dark:scrollbar-thumb-blue-600 scrollbar-track-transparent">
           {loadingMessages ? (
             <>
               {[...Array(8)].map((_, i) => (
@@ -973,7 +1003,7 @@ hover:bg-gray-100 dark:hover:bg-gray-700 transition">
         )}
 
         <footer
-          className="sticky bottom-0 w-full px-4 py-3  border-gray-100 dark:border-gray-700 "
+          className="flex-shrink-0  w-full px-4 py-3  border-gray-100 dark:border-gray-700 "
         // style={{ backgroundColor: Theme.thirdBackgroundColor }}
         >
 
@@ -1176,6 +1206,15 @@ hover:bg-gray-100 dark:hover:bg-gray-700 transition">
                         handleSend(); // ✅ send message
                       }
                     }}
+
+                        onBlur={() => {
+                          requestAnimationFrame(() => {
+                            textareaRef.current?.focus();
+                          });
+                        }}
+                        onTouchEnd={() => {
+                          textareaRef.current?.focus();
+                        }}
                     placeholder="Write a message..."
                     rows={1}
                     className="flex-1 px-10 py-2 outline-none bg-transparent text-sm resize-none overflow-hidden w-full text-white font-semibold"
