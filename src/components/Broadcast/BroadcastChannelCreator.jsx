@@ -133,7 +133,7 @@ export default function BroadcastChannelCreator({ onClose }) {
                 </div>
             </header>
 
-     <main className="flex-1 overflow-y-auto bg-gray-50">
+     <main className="flex-1 overflow-y-auto bg-gray-50 pb-20">
 
   <div className="sticky top-0 z-20 bg-white border-b">
 

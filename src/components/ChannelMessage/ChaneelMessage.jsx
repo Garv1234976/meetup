@@ -14,9 +14,10 @@ import AddMembersModal from "../../Modal/AddMembersModal";
 function generateInviteLink(channel) {
   const payload = {
     code: channel.inviteCode,
-    exp: Date.now() + 60 * 60 * 1000, 
+    exp: Date.now() + 1.5 * 60 * 60 * 1000,
+    // exp: Date.now() + 60 * 60 * 1000, // for 1 hr 
     // exp: Date.now() + 6 * 1000, // for test 6 sec
-    secret: "monkey123", 
+    secret: "monkey123",
   };
 
   const encoded = btoa(JSON.stringify(payload));
@@ -86,9 +87,9 @@ const MembersSkeleton = () => (
 
 export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const { user } = useAuth();
-  const channel = fullchannelobject; 
+  const channel = fullchannelobject;
   // console.log(JSON.stringify(fullchannelobject));
-  
+
   const BroadCastChannel = channel.isBroadcast
 
   const { socket, isReady, channelMessages, channelPinned, setActiveChannel, channelUnread, setChannelUnread, channelOnline, setChannelMessages, setChannelPinned, deleteMessageforChannelnBoradCast } = useSocket();
@@ -154,9 +155,9 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
   const channelRef = useRef(channel);
   const [showAddMembers, setShowAddMembers] = useState(false);
   useEffect(() => {
-  channelRef.current = channel;
-}, [channel]);
-  
+    channelRef.current = channel;
+  }, [channel]);
+
   const [showSearch, setShowSearch] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -323,7 +324,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
 
     const mentionMatch = value.match(/(?:^|\s)@([^\s]*)$/);
 
-    if(mentionMatch){
+    if (mentionMatch) {
       const query = mentionMatch[1].toLowerCase();
       setMentionQuery(query);
       setShowMention(true);
@@ -333,7 +334,7 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
       );
 
       setMentionList(filtered);
-    }else{
+    } else {
       setShowMention(false)
     }
   };
@@ -349,90 +350,90 @@ export function ChannelMessage({ channelid, fullchannelobject, onBack }) {
     });
   };
 
-const handleSendMessage = () => {
-  if (!message.trim() || !socket) return;
+  const handleSendMessage = () => {
+    if (!message.trim() || !socket) return;
 
-  if (BroadCastChannel) {
+    if (BroadCastChannel) {
 
-    if (!channel.broadcastRecipients?.length) {
-      console.log("❌ No recipients", channel);
-      return;
+      if (!channel.broadcastRecipients?.length) {
+        console.log("❌ No recipients", channel);
+        return;
+      }
+
+      console.log("🚀 Sending broadcast:", channel.broadcastRecipients);
+      socket.emit("send_broadcast", {
+        channelId: channel._id,
+        recipients: channel.broadcastRecipients,
+        text: message,
+        preview: getPreviewData, // 🔥 keep preview
+      });
+
+      //     setChannelMessages((prev) => ({
+      //   ...prev,
+      //   [channelid]: [
+      //     ...(prev[channelid] || []),
+      //     {
+      //       _id: Date.now(),
+      //       sender: user._id,
+      //       text: message,
+      //       file: null,
+      //       preview: getPreviewData,
+      //       createdAt: new Date().toISOString(),
+      //       isBroadcast: true,
+      //     },
+      //   ],
+      // }));
+    } else {
+      socket.emit("send_channel_message", {
+        channelId: channelid,
+        text: message,
+        preview: getPreviewData,
+      });
     }
 
-    console.log("🚀 Sending broadcast:", channel.broadcastRecipients);
-    socket.emit("send_broadcast", {
-      channelId: channel._id, 
-      recipients: channel.broadcastRecipients,
-      text: message,
-      preview: getPreviewData, // 🔥 keep preview
-    });
-
-//     setChannelMessages((prev) => ({
-//   ...prev,
-//   [channelid]: [
-//     ...(prev[channelid] || []),
-//     {
-//       _id: Date.now(),
-//       sender: user._id,
-//       text: message,
-//       file: null,
-//       preview: getPreviewData,
-//       createdAt: new Date().toISOString(),
-//       isBroadcast: true,
-//     },
-//   ],
-// }));
-  } else {
-    socket.emit("send_channel_message", {
-      channelId: channelid,
-      text: message,
-      preview: getPreviewData,
-    });
-  }
-
-  setMessage("");
-  setGetPreviewData(null);
-  setShowPreview(false);
-};
+    setMessage("");
+    setGetPreviewData(null);
+    setShowPreview(false);
+  };
 
 
 
 
 
-const loadChannel = async () => {
-      try {
-        const res = await fetch(
-          `${import.meta.env.VITE_BACK_DEV_API}/channels/${channelid}`,
-          {
-            credentials: "include",
-          }
-        );
+  const loadChannel = async () => {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_BACK_DEV_API}/channels/${channelid}`,
+        {
+          credentials: "include",
+        }
+      );
 
-        const data = await res.json();
+      const data = await res.json();
 
-        if (!res.ok) return;
+      if (!res.ok) return;
 
-        // ✅ messages
-        setChannelMessages((prev) => ({
-          ...prev,
-          [channelid]: data.messages || [],
-        }));
-        // ✅ pinned
-        setChannelPinned((prev) => ({
-          ...prev,
-          [channelid]: data.pinnedMessages || [],
-        }));
+      // ✅ messages
+      setChannelMessages((prev) => ({
+        ...prev,
+        [channelid]: data.messages || [],
+      }));
+      // ✅ pinned
+      setChannelPinned((prev) => ({
+        ...prev,
+        [channelid]: data.pinnedMessages || [],
+      }));
 
-        // 🔥 THIS IS THE KEY (YOU MISSED THIS)
-        setChannelState({
-          creator: data.creator,
-          admins: data.admins || [],
-        });
+      // 🔥 THIS IS THE KEY (YOU MISSED THIS)
+      setChannelState({
+        creator: data.creator,
+        admins: data.admins || [],
+      });
 
-      } catch (err) {
-        console.log("Hydration failed");
-      }
-    };
+    } catch (err) {
+      console.log("Hydration failed");
+    }
+  };
   useEffect(() => {
     if (channelid) {
       loadChannel();
@@ -451,7 +452,7 @@ const loadChannel = async () => {
       );
 
       const data = await res.json();
-      
+
       if (!res.ok) return;
       setLoadingMembers(true);
       setCreatorBio(data.creator);
@@ -596,21 +597,21 @@ const loadChannel = async () => {
     if (!url) return;
 
     if (BroadCastChannel) {
-  socket.emit("send_broadcast", {
-    channelId: channel._id, 
-    recipients: channel.broadcastRecipients,
-    file: url,
-    fileType: file.type,
-    fileSize: file.size,
-  });
-} else {
-  socket.emit("send_channel_message", {
-    channelId: channelid,
-    file: url,
-    fileType: file.type,
-    fileSize: file.size,
-  });
-}
+      socket.emit("send_broadcast", {
+        channelId: channel._id,
+        recipients: channel.broadcastRecipients,
+        file: url,
+        fileType: file.type,
+        fileSize: file.size,
+      });
+    } else {
+      socket.emit("send_channel_message", {
+        channelId: channelid,
+        file: url,
+        fileType: file.type,
+        fileSize: file.size,
+      });
+    }
 
     // 🔥 STEP 5 — remove temp message
     setChannelMessages((prev) => ({
@@ -711,21 +712,21 @@ const loadChannel = async () => {
     if (!url) return;
 
     if (BroadCastChannel) {
-  socket.emit("send_broadcast", {
-    channelId: channel._id, 
-    recipients: channel.broadcastRecipients,
-    file: url,
-    fileType: "audio/webm",
-    fileName: "voice.webm",
-  });
-} else {
-  socket.emit("send_channel_message", {
-    channelId: channelid,
-    file: url,
-    fileType: "audio/webm",
-    fileName: "voice.webm",
-  });
-}
+      socket.emit("send_broadcast", {
+        channelId: channel._id,
+        recipients: channel.broadcastRecipients,
+        file: url,
+        fileType: "audio/webm",
+        fileName: "voice.webm",
+      });
+    } else {
+      socket.emit("send_channel_message", {
+        channelId: channelid,
+        file: url,
+        fileType: "audio/webm",
+        fileName: "voice.webm",
+      });
+    }
 
     // ✅ remove temp
     setChannelMessages((prev) => ({
@@ -829,21 +830,21 @@ const loadChannel = async () => {
 
   const isUserAdmin = (id) =>
     channelState.admins.includes(id);
-const handleShareQR = async (channelname) => {
-  try {
-    const canvas = await html2canvas(qrRef.current);
-    const blob = await new Promise((resolve) =>
-      canvas.toBlob(resolve, "image/png")
-    );
+  const handleShareQR = async (channelname) => {
+    try {
+      const canvas = await html2canvas(qrRef.current);
+      const blob = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/png")
+      );
 
-    const file = new File([blob], "invite-qr.png", {
-      type: "image/png",
-    });
+      const file = new File([blob], "invite-qr.png", {
+        type: "image/png",
+      });
 
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({
-        title: `Join *${channelname}* channel`,
-       text: `
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `Join *${channelname}* channel`,
+          text: `
 📢 You're invited to join *${channelname}*
 
 🔗 Join instantly using this link:
@@ -855,15 +856,15 @@ ${generateInviteLink(channel)}
 
 See you inside! 🚀
 `,
-        files: [file], // ✅ QR IMAGE
-      });
-    } else {
-      alert("Sharing not supported on this device");
+          files: [file], // ✅ QR IMAGE
+        });
+      } else {
+        alert("Sharing not supported on this device");
+      }
+    } catch (err) {
+      console.error(err);
     }
-  } catch (err) {
-    console.error(err);
-  }
-};
+  };
 
   useEffect(() => {
     if (!searchResults.length) return;
@@ -883,7 +884,7 @@ See you inside! 🚀
   };
 
   useEffect(() => {
-    loadMembers(); 
+    loadMembers();
   }, [channelid]);
   return (
     <>
@@ -984,20 +985,20 @@ See you inside! 🚀
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -20, opacity: 0 }}
               className=" w-full grid grid-cols-1 sm:grid-cols-2  justify-items-end z-50 px-3 py-2 shadow-md  items-center gap-2"
-              style={{background: Theme.secondaryBackgroundColor}}
+              style={{ background: Theme.secondaryBackgroundColor }}
             >
               <input
                 value={searchText}
                 onChange={(e) => {
                   const value = e.target.value;
                   setSearchText(value);
-                  if(!value.trim()){
+                  if (!value.trim()) {
                     setSearchResults([]);
                     setActiveSearchIndex(0)
                     return;
                   }
 
-                
+
                   const results = messages
                     .map((msg, index) => ({
                       ...msg,
@@ -1211,16 +1212,16 @@ See you inside! 🚀
                         "" : String(user._id) === String(channelState.creator) ? (
                           !msg.deleted && (
                             <div className="absolute top-1 -right-4" title="Pin">
-                            <i
-                              onClick={() => {
-                                socket.emit("pin_channel_message", {
-                                  channelId: channelid,
-                                  messageId: msg._id,
-                                });
-                              }}
-                              className="fa-solid fa-thumbtack cursor-pointer text-sm text-gray-700 hover:scale-110"
-                            ></i>
-                          </div>
+                              <i
+                                onClick={() => {
+                                  socket.emit("pin_channel_message", {
+                                    channelId: channelid,
+                                    messageId: msg._id,
+                                  });
+                                }}
+                                className="fa-solid fa-thumbtack cursor-pointer text-sm text-gray-700 hover:scale-110"
+                              ></i>
+                            </div>
                           )
                         ) : ''
                       }
@@ -1266,28 +1267,58 @@ See you inside! 🚀
                       )}
 
                       {/* MESSAGE TEXT */}
-                      <span className="break-words" style={{ whiteSpace: 'pre-wrap' }}> {searchText
-                        ? msg.text.split(new RegExp(`(${escapeRegExp(searchText)})`, "gi")).map((part, i) =>
-                          part.toLowerCase() === searchText.toLowerCase() ? (
-                            <span key={i} className="bg-yellow-300 text-black rounded px-1">
-                              {part}
-                            </span>
-                          ) : (
-                            part
-                          )
-                        )
-                        : msg.text.split(/(@[a-zA-Z0-9_]+(?:\s[a-zA-Z0-9_]+)*)/g).map((part, i) =>
-                          part.startsWith("@") ? (
-                            <span
-                              key={i}
-                              className="text-blue-600 font-semibold bg-blue-100 px-1 rounded"
-                            >
-                              {part}
-                            </span>
-                          ) : (
-                            part
-                          )
-                        ) }</span>
+                      <span
+                        className="break-words"
+                        style={{ whiteSpace: "pre-wrap" }}
+                      >
+                        {(msg.text || "").trim() &&
+                          (
+                            searchText
+                              ? (msg.text || "")
+                                .split(
+                                  new RegExp(
+                                    `(${escapeRegExp(searchText)})`,
+                                    "gi"
+                                  )
+                                )
+                                .map((part, i) =>
+                                  part.toLowerCase() ===
+                                    searchText.toLowerCase() ? (
+                                    <span
+                                      key={i}
+                                      className="bg-yellow-300 text-black rounded px-1"
+                                    >
+                                      {part}
+                                    </span>
+                                  ) : (
+                                    part
+                                  )
+                                )
+
+                              : (msg.text || "")
+                                .split(
+                                  /(@[a-zA-Z0-9_]+(?:\s[a-zA-Z0-9_]+)*)/g
+                                )
+                                .map((part, i) =>
+                                  part.startsWith("@") ? (
+                                    <span
+                                      key={i}
+                                      className="
+                    text-blue-600
+                    font-semibold
+                    bg-blue-100
+                    px-1
+                    rounded
+                  "
+                                    >
+                                      {part}
+                                    </span>
+                                  ) : (
+                                    part
+                                  )
+                                )
+                          )}
+                      </span>
                       {msg.uploading && (
                         <motion.div
                           initial={{ opacity: 0, y: 10, scale: 0.95 }}
@@ -1418,19 +1449,19 @@ See you inside! 🚀
                       {/* MESSAGE TAIL */}
                       {/* <div className="absolute -bottom-1 left-3 w-3 h-3 bg-blue-400 rotate-45"></div> */}
                     </div>
-                      
-                      {isAdmin && (
-                         msg.deleted ? "" : (
-                          <button
-    onClick={() => deleteMessageforChannelnBoradCast(msg,channelid)}
-    className={`cursor-pointer  w-7 h-7 flex items-center justify-center rounded-full 
+
+                    {isAdmin && (
+                      msg.deleted ? "" : (
+                        <button
+                          onClick={() => deleteMessageforChannelnBoradCast(msg, channelid)}
+                          className={`cursor-pointer  w-7 h-7 flex items-center justify-center rounded-full 
     bg-white/70 backdrop-blur shadow-sm 
     active:scale-90 transition`}
-  >
-    <i className="fa-solid fa-trash text-[10px] text-red-500"></i>
-  </button>
-                         )
-                      )}
+                        >
+                          <i className="fa-solid fa-trash text-[10px] text-red-500"></i>
+                        </button>
+                      )
+                    )}
                     <div className="flex flex-col items-start gap-3">
                       {/*  REACTION POPUP (TOP FLOATING) */}
                       {reactionMenuOpenIndex === index && (
@@ -1459,17 +1490,17 @@ See you inside! 🚀
                       {BroadCastChannel === true ? "" : (
                         msg.deleted ? "" : (
                           <div
-                          onClick={() =>
-                            setReactionMenuOpenIndex(
-                              reactionMenuOpenIndex === index ? null : index
-                            )
-                          }
-                          
-                          className={`bg-white px-1 py-1 rounded-full shadow cursor-pointer  flex items-center gap-1 `}
-                        >
-                          <i className="text-sm fa-regular fa-face-grin"></i>
-                          <i className="fa-solid fa-chevron-down text-xs"></i>
-                        </div>
+                            onClick={() =>
+                              setReactionMenuOpenIndex(
+                                reactionMenuOpenIndex === index ? null : index
+                              )
+                            }
+
+                            className={`bg-white px-1 py-1 rounded-full shadow cursor-pointer  flex items-center gap-1 `}
+                          >
+                            <i className="text-sm fa-regular fa-face-grin"></i>
+                            <i className="fa-solid fa-chevron-down text-xs"></i>
+                          </div>
                         )
                       )}
                     </div>
@@ -1563,28 +1594,28 @@ See you inside! 🚀
             `}
               >
 
-                  {showMention && mentionList.length > 0 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 20 }}
-                      className="absolute bottom-16 left-2 w-[90%] max-h-48  overflow-y-auto bg-white shadow-lg rounded-xl z-50"
-                    >
-                      {mentionList.map((user) => (
-                        <div
-                          key={user._id}
-                          onClick={() => handleSelectMention(user)}
-                          className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                        >
-                          <img
-                            src={user.picture || "/m.svg"}
-                            className="w-8 h-8 rounded-full"
-                          />
-                          <span className="text-sm font-medium">{user.name}</span>
-                        </div>
-                      ))}
-                    </motion.div>
-                  )}
+                {showMention && mentionList.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 20 }}
+                    className="absolute bottom-16 left-2 w-[90%] max-h-48  overflow-y-auto bg-white shadow-lg rounded-xl z-50"
+                  >
+                    {mentionList.map((user) => (
+                      <div
+                        key={user._id}
+                        onClick={() => handleSelectMention(user)}
+                        className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                      >
+                        <img
+                          src={user.picture || "/m.svg"}
+                          className="w-8 h-8 rounded-full"
+                        />
+                        <span className="text-sm font-medium">{user.name}</span>
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
                 {/* TEXTAREA */}
                 <textarea
                   ref={textareaRef}
@@ -1594,11 +1625,11 @@ See you inside! 🚀
                   rows={1}
                   placeholder={
                     isAdmin
-                      ? "Type a message... or use @ to mention someone"
+                      ? "Type a message..."
                       : "Only admin can send messages"
                   }
                   className="flex-1 bg-transparent resize-none outline-none text-sm leading-5 max-h-[120px] overflow-y-auto self-end font-semibold"
-                  style={{ whiteSpace: "pre-wrap",minHeight: "30px", scrollbarWidth: 'none' }}
+                  style={{ whiteSpace: "pre-wrap", minHeight: "30px", scrollbarWidth: 'none' }}
                   onKeyDown={(e) => {
                     if (!isAdmin) return;
 
@@ -1795,10 +1826,10 @@ See you inside! 🚀
             >
               {/* HEADER */}
               <div className="p-4 border-b flex items-center justify-between">
-                
+
                 <span className="font-semibold text-lg">
                   {BroadCastChannel === true ? 'Broadcast Info' : 'Channel Info'}
-                  </span>
+                </span>
                 <i
                   onClick={() => setShowInfo(false)}
                   className="fa-solid fa-xmark cursor-pointer text-lg"
@@ -1820,32 +1851,32 @@ See you inside! 🚀
                   </span>
 
                   <span className="text-sm text-gray-500">
-                    {BroadCastChannel === true ? (channel?.broadcastRecipients.length + " Recipients"): (channel?.totalSubscribers + " subscribers")}
+                    {BroadCastChannel === true ? (channel?.broadcastRecipients.length + " Recipients") : (channel?.totalSubscribers + " subscribers")}
                   </span>
                 </div>
                 <div className="cursor-pointer flex items-center flex-col gap-2">
-                <div className="">
-                  <button
-                    onClick={() => setShowAddMembers(true)}
-                    className="flex cursor-pointer items-center gap-3 px-4 py-2 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition"
-                  >
-                    <div className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                      <i className="fa-solid fa-plus text-sm"></i>
-                    </div>
-                    <span className="text-sm font-medium text-gray-700">
-                      Add Members
-                    </span>
-                  </button>
-                </div>
+                  <div className="">
+                    <button
+                      onClick={() => setShowAddMembers(true)}
+                      className="flex cursor-pointer items-center gap-3 px-4 py-2 rounded-xl bg-white border border-gray-200 shadow-sm hover:shadow-md transition"
+                    >
+                      <div className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                        <i className="fa-solid fa-plus text-sm"></i>
+                      </div>
+                      <span className="text-sm font-medium text-gray-700">
+                        Add Members
+                      </span>
+                    </button>
+                  </div>
                   or
-                <div
+                  <div
                     id=""
                     ref={qrRef}
                     style={{
-                    backgroundColor: "#ffffff",
-                    color: "#000000",
-                  }}
-                    // className="bg-white p-3 rounded-xl shadow-inner border border-gray-200"
+                      backgroundColor: "#ffffff",
+                      color: "#000000",
+                    }}
+                  // className="bg-white p-3 rounded-xl shadow-inner border border-gray-200"
                   >
                     <a
                       href={generateInviteLink(channel)}
@@ -1860,42 +1891,42 @@ See you inside! 🚀
                         logoPadding={2}
                         logoPaddingStyle="circle"
                         removeQrCodeBehindLogo={true}
-                        ecLevel="L" 
-                        size={180} 
+                        ecLevel="L"
+                        size={180}
                       />
                     </a>
                   </div>
                   <div id="ShareOptions" className="flex gap-3 w-50">
-                <button
-                  onClick={() =>
-                    // copyToClipboard(
-                    //   `${generateInviteLink(channel)}`,
-                    // )
-                    {
-                      const link = generateInviteLink(channel)
-                      navigator.clipboard.writeText(link)
-                    }
-                  }
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-xs py-2 rounded-md"
-                >
-                  Copy Link
-                </button>
+                    <button
+                      onClick={() =>
+                      // copyToClipboard(
+                      //   `${generateInviteLink(channel)}`,
+                      // )
+                      {
+                        const link = generateInviteLink(channel)
+                        navigator.clipboard.writeText(link)
+                      }
+                      }
+                      className="flex-1 bg-gray-200 hover:bg-gray-300 text-xs py-2 rounded-md"
+                    >
+                      Copy Link
+                    </button>
 
-                <button
-                  // onClick={() =>
-                  //   navigator.share?.({
-                  //     title: `Join *${channel?.name}* channel`,
-                  //     text: "This link Expires in 1 hr",
-                  //     url: `${generateInviteLink(channel)}`,
-                  //   })
-                  // }
-                  onClick={() => handleShareQR(channel?.name)}
-                  className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-xs py-2 rounded-md"
-                >
-                  Share
-                </button>
-              </div>
+                    <button
+                      // onClick={() =>
+                      //   navigator.share?.({
+                      //     title: `Join *${channel?.name}* channel`,
+                      //     text: "This link Expires in 1 hr",
+                      //     url: `${generateInviteLink(channel)}`,
+                      //   })
+                      // }
+                      onClick={() => handleShareQR(channel?.name)}
+                      className="flex-1 bg-blue-500 hover:bg-blue-600 text-white text-xs py-2 rounded-md"
+                    >
+                      Share
+                    </button>
                   </div>
+                </div>
                 <div className="text-sm text-gray-600">
                   {channel?.description || "No description"}
                 </div>
@@ -1945,11 +1976,10 @@ See you inside! 🚀
                   )}
 
                   {!loadingMembers && members.length > 0 && (
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-3 pb-20">
                       <AnimatePresence>
                         {members.filter((d) => d._id !== channelState.creator).map((d, i) => {
                           const isOpen = activeUser === d._id;
-
                           return (
                             <motion.div
                               key={d._id}
@@ -1957,7 +1987,7 @@ See you inside! 🚀
                               animate={{ opacity: 1, y: 0 }}
                               exit={{ opacity: 0, scale: 0.9 }}
                               transition={{ delay: i * 0.05 }}
-                              className="bg-white p-2 rounded-xl shadow-sm flex flex-col gap-2"
+                              className="bg-white p-2 rounded-xl shadow-sm flex flex-col gap-2 "
                             >
                               {/* TOP ROW */}
                               <div className="flex items-center justify-between">
@@ -2038,7 +2068,7 @@ See you inside! 🚀
                   </div>
                 </div> */}
               </div>
-              
+
             </motion.div>
           </>
         )}
@@ -2267,20 +2297,20 @@ See you inside! 🚀
           </motion.div>
         )}
       </AnimatePresence>
-        {showAddMembers && (
-  <AddMembersModal
-    channelId={channelid}
+      {showAddMembers && (
+        <AddMembersModal
+          channelId={channelid}
           existingMembers={
-    channel.isBroadcast
-      ? channel.broadcastRecipients
-      : channel.subscribers
-  }
-    onClose={() => {
-  setShowAddMembers(false);
-}}
-  />
-)}
-  
+            channel.isBroadcast
+              ? channel.broadcastRecipients
+              : channel.subscribers
+          }
+          onClose={() => {
+            setShowAddMembers(false);
+          }}
+        />
+      )}
+
     </>
   );
 }

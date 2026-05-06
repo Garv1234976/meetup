@@ -551,14 +551,15 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey, setIsChatOpen }) {
                   />
                 )}
                 <div className="flex flex-col">
-                  <span>{friend.name}</span>
+                  <span className="line-clamp-1">{friend.name}</span>
                   {/* {console.log(friend)} */}
                   {/* {friend._id && typingUsers[friend._id] ? <p>typing ..</p> : lastMessages[friend._id]?.text.length > 14 ? <span>{lastMessages[friend._id]?.text.slice(0, 14)}...</span> : <span>{lastMessages[friend._id]?.text}</span> || lstMsgByMe
-                
                 } */}
                   {friend._id && typingUsers[friend._id] && (
                     <p>typing ..</p>
                   )}
+                <span className="line-clamp-1 bg-gray-200 px-2 font-semibold text-xs rounded-sm">{friend.chats?.[0]?.lastMessage}</span>
+                <span className="line-clamp-1 bg-gray-200 px-2 font-semibold text-xs rounded-sm">{friend.lastMessage}</span>
                   {/* {friend._id && typingUsers[friend._id] ? (
                       <p>typing ..</p>
                     ) : lastMessages[friend._id]?.text ? (
@@ -580,6 +581,7 @@ export function Sidebar_Two({ token, setOpenInvite, resetKey, setIsChatOpen }) {
 
               </div>
               <div className="flex items-center flex-col">
+                
                 <span>
                   {friend.lastMessageAt
                     ? new Date(friend.lastMessageAt).toLocaleTimeString([], {
